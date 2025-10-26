@@ -127,7 +127,7 @@ alwaysApply: false
 }
 ```
 
-#### 7\. 查询（精确匹配 AND）
+#### 7\. 精确搜索（AND 逻辑）
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -137,6 +137,67 @@ alwaysApply: false
 | :--- | :--- | :--- | :--- | :--- |
 | `tags` | Query | String Array | 必须包含的标签列表 (e.g., `tags=cat,cute`)。 | 是 |
 | `page`, `limit` | Query | Integer | 分页参数。 | 否 |
+
+**成功响应:**
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "total": 150,
+    "current_page": 1,
+    "results": [
+      {
+        "id": "img_x1y2z3a4",
+        "url": "https://cdn.your-imagehost.com/x1y2z3a4.jpg",
+        "description": "美丽的山川风景",
+        "tags": ["风景", "自然", "山川"]
+      }
+    ]
+  }
+}
+```
+
+#### 8\. 相关性搜索（OR 逻辑）
+
+| 方法 | 路径 | 描述 |
+| :--- | :--- | :--- |
+| `GET` | `/search/relevance` | OR 逻辑搜索，返回包含任一标签的图片，按匹配标签数降序排列。 |
+
+| 参数 | 位置 | 类型 | 描述 | 必填 |
+| :--- | :--- | :--- | :--- | :--- |
+| `tags` | Query | String Array | 标签列表 (e.g., `tags=cat,cute`)。 | 是 |
+| `page`, `limit` | Query | Integer | 分页参数。 | 否 |
+
+**成功响应:**
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "total": 520,
+    "current_page": 1,
+    "results": [
+      {
+        "id": "img_x1y2z3a4",
+        "url": "https://cdn.your-imagehost.com/x1y2z3a4.jpg",
+        "description": "可爱的猫咪",
+        "matched_tag_count": 3,
+        "tags": ["cat", "cute", "pet"]
+      },
+      {
+        "id": "img_b5c6d7e8",
+        "url": "https://cdn.your-imagehost.com/b5c6d7e8.jpg",
+        "description": "动物照片",
+        "matched_tag_count": 2,
+        "tags": ["cat", "animal"]
+      }
+    ]
+  }
+}
+```
 
 -----
 

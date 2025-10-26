@@ -281,6 +281,59 @@ curl "http://localhost:8080/api/v1/search/exact?tags=风景,自然&page=1&limit=
 
 ---
 
+### 8. 相关性搜索图片
+
+使用 OR 逻辑搜索，返回包含任一标签的图片，按匹配标签数降序排列。
+
+**请求**
+```http
+GET /api/v1/search/relevance?tags=风景,自然&page=1&limit=20
+```
+
+**查询参数**
+- `tags` (required): 标签列表，用逗号分隔
+- `page` (optional): 页码，默认 1
+- `limit` (optional): 每页数量，默认 20，最大 100
+
+**响应**
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "total": 520,
+    "current_page": 1,
+    "results": [
+      {
+        "id": "img_x1y2z3a4",
+        "url": "https://cdn.your-imagehost.com/x1y2z3a4.jpg",
+        "hash": "abc123...",
+        "description": "美丽的山川风景",
+        "upload_date": "2025-10-26T12:00:00Z",
+        "matched_tag_count": 3,
+        "tags": ["风景", "自然", "山川"]
+      },
+      {
+        "id": "img_b5c6d7e8",
+        "url": "https://cdn.your-imagehost.com/b5c6d7e8.jpg",
+        "hash": "def456...",
+        "description": "自然风光",
+        "upload_date": "2025-10-25T10:30:00Z",
+        "matched_tag_count": 2,
+        "tags": ["风景", "山川", "日落"]
+      }
+    ]
+  }
+}
+```
+
+**cURL 示例**
+```bash
+curl "http://localhost:8080/api/v1/search/relevance?tags=风景,自然&page=1&limit=20"
+```
+
+---
+
 ## MCP API 端点
 
 ### 1. 列出标签

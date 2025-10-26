@@ -127,9 +127,13 @@ curl -X PUT http://localhost:8080/api/v1/images/{image_id}/tags \
   -d '{"tags": ["风景", "自然"], "mode": "set"}'
 ```
 
-**搜索图片（精确匹配）**:
+**搜索图片**:
 ```bash
+# 精确搜索（AND 逻辑）
 curl "http://localhost:8080/api/v1/search/exact?tags=风景,自然&page=1&limit=20"
+
+# 相关性搜索（OR 逻辑）
+curl "http://localhost:8080/api/v1/search/relevance?tags=风景,自然&page=1&limit=20"
 ```
 
 **列出所有标签**:

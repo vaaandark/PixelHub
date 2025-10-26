@@ -113,13 +113,14 @@ async function performSearch() {
     }
     
     const mode = document.querySelector('input[name="searchMode"]:checked').value;
-    const endpoint = mode === 'exact' ? '/search/exact' : '/mcp/v1/search/relevance';
+    const endpoint = mode === 'exact' ? '/search/exact' : '/search/relevance';
     
     try {
         const response = await fetch(`${API_BASE}${endpoint}?tags=${encodeURIComponent(tags)}&page=1&limit=20`);
         const data = await response.json();
         
-        const results = mode === 'exact' ? data.data.results : data.results;
+        // 两种搜索模式返回格式一致，都在 data.results 中
+        const results = data.data.results;
         displayResults(results);
     } catch (error) {
         alert(`搜索失败: ${error.message}`);

@@ -406,6 +406,48 @@ func (h *Handler) SearchExact(c *gin.Context) {
 	})
 }
 
+// SearchRelevance 相关性搜索（OR）
+func (h *Handler) SearchRelevance(c *gin.Context) {
+	tagsParam := c.Query("tags")
+	if tagsParam == "" {
+		c.JSON(http.StatusBadRequest, Response{
+			Code:    400,
+			Message: "Tags parameter is required",
+		})
+		return
+	}
+
+	tags := strings.Split(tagsParam, ",")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+
+	results, total, err := database.SearchRelevance(h.db, tags, page, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Code:    500,
+			Message: "Search failed",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Code:    200,
+		Message: "Success",
+		Data: map[string]interface{}{
+			"total":        total,
+			"current_page": page,
+			"results":      results,
+		},
+	})
+}
+
 // MCPListTags MCP 服务：列出标签
 func (h *Handler) MCPListTags(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

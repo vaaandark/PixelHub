@@ -65,7 +65,10 @@ func main() {
 		// 标签管理
 		api.PUT("/images/:image_id/tags", h.UpdateImageTags)
 		api.GET("/tags", h.ListTags)
+
+		// 搜索
 		api.GET("/search/exact", h.SearchExact)
+		api.GET("/search/relevance", h.SearchRelevance)
 	}
 
 	// MCP 服务 API 路由
