@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixelHub - 智能图床</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🖼️ PixelHub</h1>
+            <p class="subtitle">智能图床 · 标签管理 · AI 搜索</p>
+        </header>
+
+        <main class="main-content">
+            <!-- 上传区域 -->
+            <section class="upload-section card">
+                <h2>📤 上传图片</h2>
+                <div class="upload-area" id="uploadArea">
+                    <input type="file" id="fileInput" accept="image/*" hidden>
+                    <div class="upload-placeholder">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p>点击或拖拽图片到此处上传</p>
+                        <p class="hint">支持 JPG、PNG、GIF 等格式</p>
+                    </div>
+                </div>
+                <div id="uploadResult" class="upload-result hidden"></div>
+            </section>
+
+            <!-- 搜索区域 -->
+            <section class="search-section card">
+                <h2>🔍 搜索图片</h2>
+                <div class="search-controls">
+                    <div class="search-input-group">
+                        <input type="text" id="searchInput" placeholder="输入标签，用逗号分隔（例如：猫咪,可爱）">
+                        <button id="searchBtn" class="btn btn-primary">搜索</button>
+                    </div>
+                    <div class="search-mode">
+                        <label>
+                            <input type="radio" name="searchMode" value="exact" checked>
+                            精确匹配 (AND)
+                        </label>
+                        <label>
+                            <input type="radio" name="searchMode" value="relevance">
+                            相关性排序 (OR)
+                        </label>
+                    </div>
+                </div>
+                <div id="searchResults" class="results-grid"></div>
+            </section>
+
+            <!-- 标签浏览 -->
+            <section class="tags-section card">
+                <h2>🏷️ 热门标签</h2>
+                <div id="tagsList" class="tags-list"></div>
+                <button id="loadMoreTags" class="btn btn-secondary">加载更多</button>
+            </section>
+        </main>
+    </div>
+
+    <!-- 图片详情模态框 -->
+    <div id="imageModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <div class="modal-body">
+                <img id="modalImage" src="" alt="">
+                <div class="modal-info">
+                    <h3>图片信息</h3>
+                    <p><strong>ID:</strong> <span id="modalImageId"></span></p>
+                    <p><strong>URL:</strong> <a id="modalImageUrl" href="" target="_blank"></a></p>
+                    <p><strong>上传时间:</strong> <span id="modalUploadDate"></span></p>
+                    
+                    <h4>标签</h4>
+                    <div id="modalTags" class="modal-tags"></div>
+                    
+                    <h4>编辑标签</h4>
+                    <div class="tag-edit">
+                        <input type="text" id="newTags" placeholder="输入新标签，用逗号分隔">
+                        <div class="tag-edit-buttons">
+                            <button id="setTagsBtn" class="btn btn-primary">替换标签</button>
+                            <button id="appendTagsBtn" class="btn btn-secondary">追加标签</button>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button id="deleteImageBtn" class="btn btn-danger">删除图片</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
+
