@@ -72,14 +72,6 @@ func main() {
 		api.GET("/search/relevance", h.SearchRelevance)
 	}
 
-	// MCP 服务 API 路由
-	mcp := r.Group("/mcp/v1")
-	mcp.Use(handlers.AuthMiddleware(cfg.MCP.APIKey))
-	{
-		mcp.GET("/tags", h.MCPListTags)
-		mcp.GET("/search/relevance", h.MCPSearchRelevance)
-	}
-
 	// 启动服务器
 	addr := cfg.Server.Host + ":" + cfg.Server.Port
 	log.Printf("Starting PixelHub server on %s", addr)

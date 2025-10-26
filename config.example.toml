@@ -5,12 +5,6 @@
 host = "0.0.0.0"
 port = "8080"
 
-[mcp]
-host = "0.0.0.0"
-port = "8081"
-# API Key 用于 MCP 服务鉴权
-api_key = "your-secret-api-key-here"
-
 [database]
 path = "./data/pixelhub.db"
 

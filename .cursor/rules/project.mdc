@@ -3,13 +3,13 @@ description: project overview
 alwaysApply: true
 ---
 
-PixelHub 是一个集成了标签(Tag)和 MCP server 功能的图床服务。
+PixelHub 是一个支持标签管理的现代化图床服务。
 
 **核心功能**：
 - 图片上传与管理（支持描述信息）
 - 标签系统（多标签支持）
 - 智能搜索（精确匹配 AND、相关性排序 OR）
-- MCP 服务接口（供 AI 应用调用）
+- RESTful API 接口（可与其他服务集成）
 
 **技术栈**：
 - 前端：原生 JavaScript (ES6+)、HTML5、CSS3

@@ -6,7 +6,6 @@ import (
 
 type Config struct {
 	Server   ServerConfig   `toml:"server"`
-	MCP      MCPConfig      `toml:"mcp"`
 	Database DatabaseConfig `toml:"database"`
 	Storage  StorageConfig  `toml:"storage"`
 }
@@ -14,12 +13,6 @@ type Config struct {
 type ServerConfig struct {
 	Host string `toml:"host"`
 	Port string `toml:"port"`
-}
-
-type MCPConfig struct {
-	Host   string `toml:"host"`
-	Port   string `toml:"port"`
-	APIKey string `toml:"api_key"`
 }
 
 type DatabaseConfig struct {

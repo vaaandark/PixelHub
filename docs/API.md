@@ -3,23 +3,15 @@
 ## 基础信息
 
 - **基础 URL**: `http://localhost:8080/api/v1`
-- **MCP 基础 URL**: `http://localhost:8080/mcp/v1`
 - **内容类型**: `application/json`
 
 ## 认证
 
-### 图床 API
 图床 API 不需要认证（可根据需求添加）。
-
-### MCP API
-MCP API 需要在请求头中提供 API Key：
-```
-Authorization: Bearer {your-api-key}
-```
 
 ---
 
-## 图床 API 端点
+## API 端点
 
 ### 1. 上传图片
 
@@ -392,85 +384,6 @@ curl "http://localhost:8080/api/v1/search/relevance?tags=风景,自然&page=1&li
 
 ---
 
-## MCP API 端点
-
-### 1. 列出标签
-
-获取标签列表，供 AI 了解可用的标签。
-
-**请求**
-```http
-GET /mcp/v1/tags?page=1&limit=100
-Authorization: Bearer {your-api-key}
-```
-
-**查询参数**
-- `page` (optional): 页码，默认 1
-- `limit` (optional): 每页数量，默认 100，最大 1000
-
-**响应**
-```json
-{
-  "tags": ["风景", "猫咪", "艺术", "食物", "抽象"],
-  "total": 1250,
-  "has_more": true
-}
-```
-
-**cURL 示例**
-```bash
-curl http://localhost:8080/mcp/v1/tags \
-  -H "Authorization: Bearer your-secret-api-key"
-```
-
----
-
-### 2. 相关性搜索
-
-使用 OR 逻辑搜索，返回按匹配标签数降序排列的图片。
-
-**请求**
-```http
-GET /mcp/v1/search/relevance?tags=cat,cute&page=1&limit=20
-Authorization: Bearer {your-api-key}
-```
-
-**查询参数**
-- `tags` (required): 标签列表，用逗号分隔
-- `page` (optional): 页码，默认 1
-- `limit` (optional): 每页数量，默认 20，最大 100
-
-**响应**
-```json
-{
-  "total": 520,
-  "results": [
-    {
-      "image_id": "img_x1y2z3a4",
-      "url": "https://cdn.your-imagehost.com/x1y2z3a4.jpg",
-      "description": "可爱的猫咪",
-      "matched_tag_count": 3,
-      "tags": ["cat", "cute", "pet"]
-    },
-    {
-      "image_id": "img_b5c6d7e8",
-      "url": "https://cdn.your-imagehost.com/b5c6d7e8.jpg",
-      "description": "动物照片",
-      "matched_tag_count": 2,
-      "tags": ["cat", "animal"]
-    }
-  ]
-}
-```
-
-**cURL 示例**
-```bash
-curl "http://localhost:8080/mcp/v1/search/relevance?tags=cat,cute&limit=10" \
-  -H "Authorization: Bearer your-secret-api-key"
-```
-
----
-
 ## 错误响应
 
 所有错误响应遵循统一格式：
@@ -485,7 +398,6 @@ curl "http://localhost:8080/mcp/v1/search/relevance?tags=cat,cute&limit=10" \
 ### 常见错误码
 
 - `400 Bad Request`: 请求参数错误
-- `401 Unauthorized`: 未授权（MCP API）
 - `404 Not Found`: 资源不存在
 - `500 Internal Server Error`: 服务器内部错误
 

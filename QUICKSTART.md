@@ -70,11 +70,6 @@ docker-compose up -d
 host = "0.0.0.0"
 port = "8080"
 
-[mcp]
-host = "0.0.0.0"
-port = "8081"
-api_key = "your-secret-api-key-here"  # ⚠️ 修改为强密码
-
 [database]
 path = "./data/pixelhub.db"
 
@@ -136,18 +131,6 @@ curl -X PUT http://localhost:8080/api/v1/images/img_abc123456789/tags \
 
 # 搜索图片
 curl "http://localhost:8080/api/v1/search/exact?tags=测试,风景"
-```
-
-### 4. 测试 MCP API
-
-```bash
-# 列出标签
-curl http://localhost:8080/mcp/v1/tags \
-  -H "Authorization: Bearer your-secret-api-key-here"
-
-# 搜索图片
-curl "http://localhost:8080/mcp/v1/search/relevance?tags=测试&limit=5" \
-  -H "Authorization: Bearer your-secret-api-key-here"
 ```
 
 ## 常见问题

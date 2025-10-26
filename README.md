@@ -1,6 +1,6 @@
 # PixelHub 🖼️
 
-PixelHub 是一个集成了标签管理和 MCP (Model Context Protocol) 服务的现代化图床应用。它不仅支持传统的图片上传和管理功能，还提供强大的标签系统，让你可以通过标签快速检索图片。同时，它还实现了 MCP 服务器接口，让 AI 大语言模型能够智能地查找和推荐图片。
+PixelHub 是一个现代化的图床应用，支持图片上传、管理和标签系统。它提供强大的标签功能，让你可以通过标签快速检索和组织图片。
 
 ## ✨ 特性
 
@@ -10,8 +10,8 @@ PixelHub 是一个集成了标签管理和 MCP (Model Context Protocol) 服务�
 - 🔍 **智能搜索**: 
   - 精确搜索（AND 逻辑）：只返回包含所有指定标签的图片
   - 相关性搜索（OR 逻辑）：按匹配标签数量排序
-- 🤖 **MCP 支持**: 提供标准 MCP 接口，供 AI 应用调用
 - 📦 **灵活存储**: 抽象的存储接口，支持多种对象存储服务
+- 🔌 **可扩展**: 支持通过 MCP 等协议与外部服务集成（可独立部署）
 - 🎨 **现代 UI**: 美观的用户界面，响应式设计
 
 ## 🏗️ 技术栈
@@ -55,11 +55,6 @@ cp config.example.toml config.toml
 [server]
 host = "0.0.0.0"
 port = "8080"
-
-[mcp]
-host = "0.0.0.0"
-port = "8081"
-api_key = "your-secret-api-key-here"  # 修改为你的 API Key
 
 [database]
 path = "./data/pixelhub.db"
@@ -159,27 +154,7 @@ curl "http://localhost:8080/api/v1/tags?page=1&limit=50"
 curl -X DELETE http://localhost:8080/api/v1/images/{image_id}
 ```
 
-#### MCP 服务 API
-
-基础 URL: `http://localhost:8080/mcp/v1`
-
-**注意**: MCP API 需要在请求头中提供 API Key：
-
-```bash
-Authorization: Bearer your-secret-api-key-here
-```
-
-**列出标签**:
-```bash
-curl http://localhost:8080/mcp/v1/tags \
-  -H "Authorization: Bearer your-secret-api-key-here"
-```
-
-**相关性搜索**:
-```bash
-curl "http://localhost:8080/mcp/v1/search/relevance?tags=cat,cute&limit=10" \
-  -H "Authorization: Bearer your-secret-api-key-here"
-```
+完整的 API 文档请参考 [docs/API.md](docs/API.md)。
 
 ## 🔧 开发
 
