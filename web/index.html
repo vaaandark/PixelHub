@@ -57,6 +57,24 @@
                 <div id="searchResults" class="results-grid"></div>
             </section>
 
+            <!-- 图片浏览 -->
+            <section class="gallery-section card">
+                <h2>📷 全部图片</h2>
+                <div class="gallery-controls">
+                    <select id="sortSelect" class="sort-select">
+                        <option value="date_desc">最新优先</option>
+                        <option value="date_asc">最旧优先</option>
+                    </select>
+                    <span class="gallery-stats">共 <span id="totalImages">0</span> 张图片</span>
+                </div>
+                <div id="galleryGrid" class="results-grid"></div>
+                <div class="gallery-pagination">
+                    <button id="prevPageBtn" class="btn btn-secondary" disabled>上一页</button>
+                    <span id="pageInfo">第 1 页</span>
+                    <button id="nextPageBtn" class="btn btn-secondary">下一页</button>
+                </div>
+            </section>
+
             <!-- 标签浏览 -->
             <section class="tags-section card">
                 <h2>🏷️ 热门标签</h2>

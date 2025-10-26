@@ -4,6 +4,9 @@ const API_BASE = '/api/v1';
 let currentPage = 1;
 let currentImageId = null;
 let tagsPage = 1;
+let galleryPage = 1;
+let gallerySort = 'date_desc';
+let totalImages = 0;
 
 // DOM 元素
 const uploadArea = document.getElementById('uploadArea');
@@ -21,6 +24,7 @@ const modalClose = document.querySelector('.modal-close');
 document.addEventListener('DOMContentLoaded', () => {
     initUpload();
     initSearch();
+    initGallery();
     loadTags();
     initModal();
 });
@@ -86,6 +90,8 @@ async function uploadFile(file) {
             `;
             fileInput.value = '';
             document.getElementById('uploadDescription').value = '';
+            // 刷新图片列表
+            loadGallery();
         } else {
             throw new Error(data.message);
         }
@@ -144,6 +150,99 @@ function displayResults(results) {
             </div>
         </div>
     `).join('');
+}
+
+// Gallery 功能
+function initGallery() {
+    const sortSelect = document.getElementById('sortSelect');
+    const prevPageBtn = document.getElementById('prevPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
+    
+    sortSelect.addEventListener('change', (e) => {
+        gallerySort = e.target.value;
+        galleryPage = 1;
+        loadGallery();
+    });
+    
+    prevPageBtn.addEventListener('click', () => {
+        if (galleryPage > 1) {
+            galleryPage--;
+            loadGallery();
+        }
+    });
+    
+    nextPageBtn.addEventListener('click', () => {
+        const maxPage = Math.ceil(totalImages / 20);
+        if (galleryPage < maxPage) {
+            galleryPage++;
+            loadGallery();
+        }
+    });
+    
+    // 初始加载
+    loadGallery();
+}
+
+async function loadGallery() {
+    const galleryGrid = document.getElementById('galleryGrid');
+    galleryGrid.innerHTML = '<p style="text-align:center;color:#64748b;">加载中...</p>';
+    
+    try {
+        const response = await fetch(
+            `${API_BASE}/images?page=${galleryPage}&limit=20&sort=${gallerySort}`
+        );
+        const data = await response.json();
+        
+        if (data.code === 200) {
+            totalImages = data.data.total;
+            document.getElementById('totalImages').textContent = totalImages;
+            document.getElementById('pageInfo').textContent = `第 ${galleryPage} 页`;
+            
+            // 更新分页按钮状态
+            const prevBtn = document.getElementById('prevPageBtn');
+            const nextBtn = document.getElementById('nextPageBtn');
+            prevBtn.disabled = galleryPage === 1;
+            nextBtn.disabled = galleryPage >= Math.ceil(totalImages / 20);
+            
+            // 显示图片
+            if (data.data.images && data.data.images.length > 0) {
+                displayGallery(data.data.images);
+            } else {
+                galleryGrid.innerHTML = '<p style="text-align:center;color:#64748b;">暂无图片</p>';
+            }
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        galleryGrid.innerHTML = `<p style="text-align:center;color:#ef4444;">加载失败: ${error.message}</p>`;
+    }
+}
+
+function displayGallery(images) {
+    const galleryGrid = document.getElementById('galleryGrid');
+    galleryGrid.innerHTML = images.map(img => `
+        <div class="result-item" onclick="showImageDetail('${img.id}')">
+            <img src="${img.url}" alt="${img.description || '图片'}">
+            <div class="result-item-info">
+                ${img.description ? `<p style="margin-bottom: 0.5rem; color: var(--text-color); font-size: 0.9rem;">${img.description}</p>` : ''}
+                <div class="result-item-tags">
+                    ${img.tags && img.tags.length > 0 ? img.tags.map(tag => `<span class="tag">${tag}</span>`).join('') : ''}
+                </div>
+                <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.875rem;">${formatDate(img.upload_date)}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('zh-CN', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 // 标签功能
@@ -260,6 +359,7 @@ async function updateDescription() {
         if (data.code === 200) {
             alert('描述更新成功！');
             showImageDetail(currentImageId);
+            loadGallery(); // 刷新图片列表
         } else {
             throw new Error(data.message);
         }
@@ -293,6 +393,7 @@ async function updateTags(mode) {
             document.getElementById('newTags').value = '';
             showImageDetail(currentImageId);
             loadTags(); // 重新加载标签列表
+            loadGallery(); // 刷新图片列表
         } else {
             throw new Error(data.message);
         }
@@ -318,6 +419,7 @@ async function deleteImage() {
             closeModal();
             // 刷新搜索结果或标签
             loadTags();
+            loadGallery();
         } else {
             throw new Error(data.message);
         }

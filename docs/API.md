@@ -63,7 +63,65 @@ curl -X POST http://localhost:8080/api/v1/images/upload \
 
 ---
 
-### 2. 获取图片详情
+### 2. 列出所有图片
+
+获取所有图片列表，支持分页和排序。
+
+**请求**
+```http
+GET /api/v1/images?page=1&limit=20&sort=date_desc
+```
+
+**查询参数**
+- `page` (optional): 页码，默认 1
+- `limit` (optional): 每页数量，默认 20，最大 100
+- `sort` (optional): 排序方式
+  - `date_desc` (默认): 最新优先
+  - `date_asc`: 最旧优先
+
+**响应**
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "total": 150,
+    "current_page": 1,
+    "images": [
+      {
+        "id": "img_a1b2c3d4",
+        "url": "https://cdn.your-imagehost.com/a1b2c3d4.jpg",
+        "description": "美丽的风景照片",
+        "upload_date": "2025-10-26T12:00:00Z",
+        "tags": ["风景", "自然"]
+      },
+      {
+        "id": "img_b5c6d7e8",
+        "url": "https://cdn.your-imagehost.com/b5c6d7e8.jpg",
+        "description": "城市夜景",
+        "upload_date": "2025-10-25T20:30:00Z",
+        "tags": ["城市", "夜景"]
+      }
+    ]
+  }
+}
+```
+
+**cURL 示例**
+```bash
+# 获取第一页（默认）
+curl http://localhost:8080/api/v1/images
+
+# 获取第二页，每页 10 条
+curl "http://localhost:8080/api/v1/images?page=2&limit=10"
+
+# 按上传时间升序排序
+curl "http://localhost:8080/api/v1/images?sort=date_asc"
+```
+
+---
+
+### 3. 获取图片详情
 
 获取指定图片的完整信息，包括 URL、描述、标签等元数据。
 
@@ -95,7 +153,7 @@ curl http://localhost:8080/api/v1/images/img_a1b2c3d4
 
 ---
 
-### 3. 更新图片描述
+### 4. 更新图片描述
 
 更新指定图片的描述信息。
 
@@ -131,7 +189,7 @@ curl -X PUT http://localhost:8080/api/v1/images/img_a1b2c3d4 \
 
 ---
 
-### 4. 更新图片标签
+### 5. 更新图片标签
 
 为图片添加或更新标签。
 
@@ -177,7 +235,7 @@ curl -X PUT http://localhost:8080/api/v1/images/img_a1b2c3d4/tags \
 
 ---
 
-### 5. 删除图片
+### 6. 删除图片
 
 删除指定图片（软删除）。
 
@@ -201,7 +259,7 @@ curl -X DELETE http://localhost:8080/api/v1/images/img_a1b2c3d4
 
 ---
 
-### 6. 列出所有标签
+### 7. 列出所有标签
 
 获取系统中所有标签的列表（按使用次数排序）。
 
@@ -238,7 +296,7 @@ curl "http://localhost:8080/api/v1/tags?page=1&limit=50"
 
 ---
 
-### 7. 精确搜索图片
+### 8. 精确搜索图片
 
 使用 AND 逻辑搜索包含所有指定标签的图片。
 
@@ -281,7 +339,7 @@ curl "http://localhost:8080/api/v1/search/exact?tags=风景,自然&page=1&limit=
 
 ---
 
-### 8. 相关性搜索图片
+### 9. 相关性搜索图片
 
 使用 OR 逻辑搜索，返回包含任一标签的图片，按匹配标签数降序排列。
 

@@ -37,17 +37,45 @@ alwaysApply: false
 }
 ```
 
-#### 2\. 删除图片
+#### 2\. 列出所有图片
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
-| `DELETE` | `/images/{image_id}` | 根据 ID 删除图片（建议软删除）。 |
+| `GET` | `/images` | 获取所有图片列表，支持分页。 |
+
+| 参数 | 位置 | 类型 | 描述 | 必填 |
+| :--- | :--- | :--- | :--- | :--- |
+| `page` | Query | Integer | 页码（从 1 开始）。 | 否 (默认 1) |
+| `limit` | Query | Integer | 每页数量。 | 否 (默认 20) |
+| `sort` | Query | String | 排序方式：`date_desc` (最新优先) 或 `date_asc` (最旧优先)。 | 否 (默认 date_desc) |
+
+**成功响应 (200 OK):**
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "total": 150,
+    "current_page": 1,
+    "images": [
+      {
+        "id": "img_a1b2c3d4",
+        "url": "https://cdn.your-imagehost.com/a1b2c3d4.jpg",
+        "description": "美丽的风景照片",
+        "upload_date": "2025-10-26T12:00:00Z",
+        "tags": ["风景", "自然"]
+      }
+    ]
+  }
+}
+```
 
 #### 3\. 获取图片详情
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
-| `GET` | `/images/{image_id}` | 获取图片的完整信息，包括 URL、描述、标签等元数据。 |
+| `GET` | `/images/{image_id}` | 获取单张图片的完整信息，包括 URL、描述、标签等元数据。 |
 
 **成功响应 (200 OK):**
 
@@ -66,7 +94,7 @@ alwaysApply: false
 }
 ```
 
-#### 4\. 更新图片信息
+#### 4\. 更新图片描述
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -85,9 +113,24 @@ alwaysApply: false
 }
 ```
 
+#### 5\. 删除图片
+
+| 方法 | 路径 | 描述 |
+| :--- | :--- | :--- |
+| `DELETE` | `/images/{image_id}` | 根据 ID 删除图片（软删除）。 |
+
+**成功响应 (200 OK):**
+
+```json
+{
+  "code": 200,
+  "message": "Image deleted successfully"
+}
+```
+
 ### B. 标签管理与查询 (Tag Management & Query)
 
-#### 5\. 给图片打标签
+#### 6\. 给图片打标签
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -98,7 +141,7 @@ alwaysApply: false
 | `tags` | Body | String Array | 新的标签列表。 | 是 |
 | `mode` | Body | String | **'set'** (替换所有标签) 或 **'append'** (追加新标签)。 | 否 (默认'set') |
 
-#### 6\. 列出所有标签
+#### 7\. 列出所有标签
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -127,7 +170,7 @@ alwaysApply: false
 }
 ```
 
-#### 7\. 精确搜索（AND 逻辑）
+#### 8\. 精确搜索（AND 逻辑）
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -159,7 +202,7 @@ alwaysApply: false
 }
 ```
 
-#### 8\. 相关性搜索（OR 逻辑）
+#### 9\. 相关性搜索（OR 逻辑）
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |

@@ -93,7 +93,8 @@ go run cmd/server/main.go
 1. **上传图片**: 点击或拖拽图片到上传区域，可选择添加描述
 2. **管理图片**: 点击图片查看详情，可编辑描述、标签或删除图片
 3. **搜索图片**: 在搜索框输入标签（用逗号分隔），选择搜索模式
-4. **浏览标签**: 查看热门标签，点击标签快速搜索
+4. **浏览图片**: 查看所有已上传的图片，支持排序和分页
+5. **浏览标签**: 查看热门标签，点击标签快速搜索
 
 ### API 使用
 
@@ -106,6 +107,18 @@ go run cmd/server/main.go
 curl -X POST http://localhost:8080/api/v1/images/upload \
   -F "file=@/path/to/image.jpg" \
   -F "description=美丽的风景照片"
+```
+
+**列出所有图片**:
+```bash
+# 获取第一页（默认最新优先）
+curl http://localhost:8080/api/v1/images
+
+# 获取第二页，每页 10 条
+curl "http://localhost:8080/api/v1/images?page=2&limit=10"
+
+# 按上传时间升序排序
+curl "http://localhost:8080/api/v1/images?sort=date_asc"
 ```
 
 **获取图片详情**:

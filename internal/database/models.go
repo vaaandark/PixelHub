@@ -50,6 +50,57 @@ func GetPicture(db *sql.DB, id string) (*Picture, error) {
 	return &pic, nil
 }
 
+// ListPictures 列出所有图片（分页）
+func ListPictures(db *sql.DB, page, limit int, sort string) ([]PictureWithTags, int, error) {
+	// 确定排序方式
+	orderBy := "p.upload_date DESC" // 默认最新优先
+	if sort == "date_asc" {
+		orderBy = "p.upload_date ASC"
+	}
+
+	// 获取总数
+	var total int
+	err := db.QueryRow("SELECT COUNT(*) FROM pictures WHERE deleted = 0").Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 获取图片列表
+	offset := (page - 1) * limit
+	query := `
+		SELECT p.id, p.url, p.storage_key, p.hash, p.description, p.upload_date
+		FROM pictures p
+		WHERE p.deleted = 0
+		ORDER BY ` + orderBy + `
+		LIMIT ? OFFSET ?
+	`
+
+	rows, err := db.Query(query, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var results []PictureWithTags
+	for rows.Next() {
+		var pic PictureWithTags
+		if err := rows.Scan(&pic.ID, &pic.URL, &pic.StorageKey, &pic.Hash, &pic.Description, &pic.UploadDate); err != nil {
+			return nil, 0, err
+		}
+
+		// 获取标签
+		tags, err := GetPictureTags(db, pic.ID)
+		if err != nil {
+			return nil, 0, err
+		}
+		pic.Tags = tags
+
+		results = append(results, pic)
+	}
+
+	return results, total, nil
+}
+
 // DeletePicture 软删除图片
 func DeletePicture(db *sql.DB, id string) error {
 	_, err := db.Exec("UPDATE pictures SET deleted = 1 WHERE id = ?", id)

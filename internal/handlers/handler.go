@@ -170,6 +170,44 @@ func (h *Handler) DeleteImage(c *gin.Context) {
 	})
 }
 
+// ListImages 列出所有图片
+func (h *Handler) ListImages(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	sort := c.DefaultQuery("sort", "date_desc")
+
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+
+	// 验证排序参数
+	if sort != "date_desc" && sort != "date_asc" {
+		sort = "date_desc"
+	}
+
+	images, total, err := database.ListPictures(h.db, page, limit, sort)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Code:    500,
+			Message: "Failed to list images",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Code:    200,
+		Message: "Success",
+		Data: map[string]interface{}{
+			"total":        total,
+			"current_page": page,
+			"images":       images,
+		},
+	})
+}
+
 // GetImageDetail 获取图片详情
 func (h *Handler) GetImageDetail(c *gin.Context) {
 	imageID := c.Param("image_id")
