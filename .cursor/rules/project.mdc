@@ -1,0 +1,6 @@
+---
+alwaysApply: true
+---
+
+- 前端服务使用 JavaScript 编写，后端服务使用 Golang 编写
+- 图片存储需要的读写接口应当抽象成 interface，目前选用的腾讯云对象存储服务应该只是其中一种 provider 实现

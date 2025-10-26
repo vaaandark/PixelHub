@@ -1,0 +1,8 @@
+---
+description: project configuration
+alwaysApply: false
+---
+
+以下配置应该用 TOML 格式配置在文件中，并在后端服务启动时加载：
+- 后端服务和 MCP 服务的 HOST 和 PORT 等
+- 对象存储的桶名、密钥等

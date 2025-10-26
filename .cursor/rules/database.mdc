@@ -1,0 +1,12 @@
+---
+description: database
+alwaysApply: false
+---
+
+在目前阶段，使用 SQLite 即可。
+
+| 表名 | 作用 | 字段示例 | 搜索优势 |
+| --- | --- | --- | --- |
+| pictures (图片表) | 存储图片的基本信息。 | "id (PK) |  url |  storage_key |  upload_date" | 存储图片的核心信息。 |
+| tags (标签表) | 存储所有唯一的标签名称。 | "id (PK) |  tag_name (UNIQUE) |  count (标签使用次数)" | 确保标签名唯一，方便管理和列出标签。 |
+| picture_tags (关联表) | 核心！关联图片和标签。 | "picture_id (FK) |  tag_id (FK)" | 解决了多对多关系，是搜索的桥梁。 |
