@@ -4,7 +4,8 @@ PixelHub 是一个集成了标签管理和 MCP (Model Context Protocol) 服务�
 
 ## ✨ 特性
 
-- 🚀 **快速上传**: 支持拖拽上传、点击上传多种方式
+- 🚀 **快速上传**: 支持拖拽上传、点击上传多种方式，可添加图片描述
+- 📝 **图片描述**: 为每张图片添加详细描述信息，便于管理和搜索
 - 🏷️ **标签管理**: 为图片添加标签，支持多标签组合搜索
 - 🔍 **智能搜索**: 
   - 精确搜索（AND 逻辑）：只返回包含所有指定标签的图片
@@ -89,11 +90,10 @@ go run cmd/server/main.go
 
 **功能说明**：
 
-1. **上传图片**: 点击或拖拽图片到上传区域
-2. **添加标签**: 上传成功后，点击"添加标签"按钮
+1. **上传图片**: 点击或拖拽图片到上传区域，可选择添加描述
+2. **管理图片**: 点击图片查看详情，可编辑描述、标签或删除图片
 3. **搜索图片**: 在搜索框输入标签（用逗号分隔），选择搜索模式
 4. **浏览标签**: 查看热门标签，点击标签快速搜索
-5. **管理图片**: 点击图片查看详情、编辑标签或删除
 
 ### API 使用
 
@@ -104,12 +104,20 @@ go run cmd/server/main.go
 **上传图片**:
 ```bash
 curl -X POST http://localhost:8080/api/v1/images/upload \
-  -F "file=@/path/to/image.jpg"
+  -F "file=@/path/to/image.jpg" \
+  -F "description=美丽的风景照片"
 ```
 
 **获取图片详情**:
 ```bash
 curl http://localhost:8080/api/v1/images/{image_id}
+```
+
+**更新图片描述**:
+```bash
+curl -X PUT http://localhost:8080/api/v1/images/{image_id} \
+  -H "Content-Type: application/json" \
+  -d '{"description": "更新后的描述"}'
 ```
 
 **更新图片标签**:

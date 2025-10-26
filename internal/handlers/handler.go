@@ -46,6 +46,9 @@ func (h *Handler) UploadImage(c *gin.Context) {
 		return
 	}
 
+	// 获取可选的描述信息
+	description := c.PostForm("description")
+
 	// 打开文件
 	src, err := file.Open()
 	if err != nil {
@@ -96,10 +99,11 @@ func (h *Handler) UploadImage(c *gin.Context) {
 
 	// 保存到数据库
 	pic := &database.Picture{
-		ID:         imageID,
-		URL:        url,
-		StorageKey: storageKey,
-		Hash:       hash,
+		ID:          imageID,
+		URL:         url,
+		StorageKey:  storageKey,
+		Hash:        hash,
+		Description: description,
 	}
 
 	if err := database.CreatePicture(h.db, pic); err != nil {
@@ -116,9 +120,10 @@ func (h *Handler) UploadImage(c *gin.Context) {
 		Code:    201,
 		Message: "Upload successful",
 		Data: map[string]interface{}{
-			"image_id": imageID,
-			"url":      url,
-			"hash":     hash,
+			"image_id":    imageID,
+			"url":         url,
+			"hash":        hash,
+			"description": description,
 		},
 	})
 }
@@ -202,6 +207,7 @@ func (h *Handler) GetImageDetail(c *gin.Context) {
 			"image_id":    pic.ID,
 			"url":         pic.URL,
 			"hash":        pic.Hash,
+			"description": pic.Description,
 			"upload_date": pic.UploadDate,
 			"tags":        tags,
 		},
@@ -265,6 +271,55 @@ func (h *Handler) UpdateImageTags(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		Code:    200,
 		Message: "Tags updated successfully",
+	})
+}
+
+// UpdateImageDescription 更新图片描述
+func (h *Handler) UpdateImageDescription(c *gin.Context) {
+	imageID := c.Param("image_id")
+
+	var req struct {
+		Description string `json:"description" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Code:    400,
+			Message: "Invalid request",
+		})
+		return
+	}
+
+	// 检查图片是否存在
+	_, err := database.GetPicture(h.db, imageID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, Response{
+				Code:    404,
+				Message: "Image not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, Response{
+			Code:    500,
+			Message: "Failed to get image",
+		})
+		return
+	}
+
+	// 更新描述
+	err = database.UpdatePictureDescription(h.db, imageID, req.Description)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Code:    500,
+			Message: fmt.Sprintf("Failed to update description: %v", err),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Code:    200,
+		Message: "Description updated successfully",
 	})
 }
 
@@ -420,6 +475,7 @@ func (h *Handler) MCPSearchRelevance(c *gin.Context) {
 		mcpResults[i] = map[string]interface{}{
 			"image_id":          result.ID,
 			"url":               result.URL,
+			"description":       result.Description,
 			"matched_tag_count": result.MatchedTagCount,
 			"tags":              result.Tags,
 		}

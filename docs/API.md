@@ -23,7 +23,7 @@ Authorization: Bearer {your-api-key}
 
 ### 1. 上传图片
 
-上传图片文件到服务器。
+上传图片文件到服务器，可选添加图片描述。
 
 **请求**
 ```http
@@ -33,6 +33,7 @@ Content-Type: multipart/form-data
 
 **参数**
 - `file` (required): 图片文件
+- `description` (optional): 图片描述信息
 
 **响应**
 ```json
@@ -42,22 +43,29 @@ Content-Type: multipart/form-data
   "data": {
     "image_id": "img_a1b2c3d4",
     "url": "https://cdn.your-imagehost.com/a1b2c3d4.jpg",
-    "hash": "e6884675b87..."
+    "hash": "e6884675b87...",
+    "description": "美丽的风景照片"
   }
 }
 ```
 
 **cURL 示例**
 ```bash
+# 不带描述
 curl -X POST http://localhost:8080/api/v1/images/upload \
   -F "file=@/path/to/image.jpg"
+
+# 带描述
+curl -X POST http://localhost:8080/api/v1/images/upload \
+  -F "file=@/path/to/image.jpg" \
+  -F "description=美丽的风景照片"
 ```
 
 ---
 
 ### 2. 获取图片详情
 
-获取指定图片的元数据和标签。
+获取指定图片的完整信息，包括 URL、描述、标签等元数据。
 
 **请求**
 ```http
@@ -73,6 +81,7 @@ GET /api/v1/images/{image_id}
     "image_id": "img_a1b2c3d4",
     "url": "https://cdn.your-imagehost.com/a1b2c3d4.jpg",
     "hash": "e6884675b87...",
+    "description": "美丽的风景照片",
     "upload_date": "2025-10-26T12:00:00Z",
     "tags": ["风景", "自然", "山川"]
   }
@@ -86,7 +95,43 @@ curl http://localhost:8080/api/v1/images/img_a1b2c3d4
 
 ---
 
-### 3. 更新图片标签
+### 3. 更新图片描述
+
+更新指定图片的描述信息。
+
+**请求**
+```http
+PUT /api/v1/images/{image_id}
+Content-Type: application/json
+```
+
+**参数**
+```json
+{
+  "description": "更新后的图片描述"
+}
+```
+
+- `description` (required): 新的图片描述
+
+**响应**
+```json
+{
+  "code": 200,
+  "message": "Description updated successfully"
+}
+```
+
+**cURL 示例**
+```bash
+curl -X PUT http://localhost:8080/api/v1/images/img_a1b2c3d4 \
+  -H "Content-Type: application/json" \
+  -d '{"description": "更新后的图片描述"}'
+```
+
+---
+
+### 4. 更新图片标签
 
 为图片添加或更新标签。
 
@@ -132,7 +177,7 @@ curl -X PUT http://localhost:8080/api/v1/images/img_a1b2c3d4/tags \
 
 ---
 
-### 4. 删除图片
+### 5. 删除图片
 
 删除指定图片（软删除）。
 
@@ -156,7 +201,7 @@ curl -X DELETE http://localhost:8080/api/v1/images/img_a1b2c3d4
 
 ---
 
-### 5. 列出所有标签
+### 6. 列出所有标签
 
 获取系统中所有标签的列表（按使用次数排序）。
 
@@ -193,7 +238,7 @@ curl "http://localhost:8080/api/v1/tags?page=1&limit=50"
 
 ---
 
-### 6. 精确搜索图片
+### 7. 精确搜索图片
 
 使用 AND 逻辑搜索包含所有指定标签的图片。
 
@@ -220,6 +265,7 @@ GET /api/v1/search/exact?tags=风景,自然&page=1&limit=20
         "id": "img_x1y2z3a4",
         "url": "https://cdn.your-imagehost.com/x1y2z3a4.jpg",
         "hash": "abc123...",
+        "description": "美丽的山川风景",
         "upload_date": "2025-10-26T12:00:00Z",
         "tags": ["风景", "自然", "山川"]
       }
@@ -291,12 +337,14 @@ Authorization: Bearer {your-api-key}
     {
       "image_id": "img_x1y2z3a4",
       "url": "https://cdn.your-imagehost.com/x1y2z3a4.jpg",
+      "description": "可爱的猫咪",
       "matched_tag_count": 3,
       "tags": ["cat", "cute", "pet"]
     },
     {
       "image_id": "img_b5c6d7e8",
       "url": "https://cdn.your-imagehost.com/b5c6d7e8.jpg",
+      "description": "动物照片",
       "matched_tag_count": 2,
       "tags": ["cat", "animal"]
     }
@@ -342,6 +390,7 @@ curl "http://localhost:8080/mcp/v1/search/relevance?tags=cat,cute&limit=10" \
   "url": "string",          // 访问 URL
   "storage_key": "string",  // 存储键
   "hash": "string",         // 文件哈希
+  "description": "string",  // 图片描述（可选）
   "upload_date": "string",  // 上传时间 (ISO 8601)
   "deleted": false          // 是否已删除
 }
@@ -369,11 +418,32 @@ curl "http://localhost:8080/mcp/v1/search/relevance?tags=cat,cute&limit=10" \
 
 ## 最佳实践
 
-1. **图片上传后添加标签**：上传成功后立即为图片添加标签，便于后续检索
-2. **使用有意义的标签**：标签应该清晰描述图片内容
-3. **标签规范化**：使用统一的标签命名规范（如全小写、中英文统一等）
-4. **批量操作**：如需更新大量图片，考虑分批处理
+1. **完善图片信息**：
+   - 上传时添加描述信息，说明图片内容和用途
+   - 上传成功后立即添加相关标签，便于后续检索和分类
+   
+2. **描述规范**：
+   - 使用简洁明确的描述文字
+   - 描述应包含图片的关键信息（内容、场景、用途等）
+   - 建议长度：10-100 个字符
+   
+3. **标签规范**：
+   - 使用有意义的标签，清晰描述图片特征
+   - 采用统一的命名规范（如全小写、中英文统一）
+   - 每张图片建议 3-10 个标签
+   - 标签长度建议不超过 50 个字符
+   
+4. **批量操作**：
+   - 如需更新大量图片，考虑分批处理
+   - 使用脚本自动化标签管理
+   
 5. **搜索优化**：
-   - 精确搜索：用于需要同时满足多个条件的场景
-   - 相关性搜索：用于寻找相关图片的场景
+   - **精确搜索**：用于需要同时满足多个条件的场景（AND 逻辑）
+   - **相关性搜索**：用于寻找相关图片的场景（OR 逻辑）
+   - 搜索标签数量建议不超过 10 个
+   
+6. **描述与标签配合使用**：
+   - 描述用于详细说明，标签用于分类检索
+   - 描述可以包含更多上下文信息
+   - 标签应该是通用的、可复用的关键词
 

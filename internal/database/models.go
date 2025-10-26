@@ -6,12 +6,13 @@ import (
 )
 
 type Picture struct {
-	ID         string    `json:"id"`
-	URL        string    `json:"url"`
-	StorageKey string    `json:"storage_key"`
-	Hash       string    `json:"hash"`
-	UploadDate time.Time `json:"upload_date"`
-	Deleted    bool      `json:"deleted"`
+	ID          string    `json:"id"`
+	URL         string    `json:"url"`
+	StorageKey  string    `json:"storage_key"`
+	Hash        string    `json:"hash"`
+	Description string    `json:"description"`
+	UploadDate  time.Time `json:"upload_date"`
+	Deleted     bool      `json:"deleted"`
 }
 
 type Tag struct {
@@ -29,8 +30,8 @@ type PictureWithTags struct {
 // CreatePicture 创建新图片记录
 func CreatePicture(db *sql.DB, pic *Picture) error {
 	_, err := db.Exec(
-		"INSERT INTO pictures (id, url, storage_key, hash) VALUES (?, ?, ?, ?)",
-		pic.ID, pic.URL, pic.StorageKey, pic.Hash,
+		"INSERT INTO pictures (id, url, storage_key, hash, description) VALUES (?, ?, ?, ?, ?)",
+		pic.ID, pic.URL, pic.StorageKey, pic.Hash, pic.Description,
 	)
 	return err
 }
@@ -39,9 +40,9 @@ func CreatePicture(db *sql.DB, pic *Picture) error {
 func GetPicture(db *sql.DB, id string) (*Picture, error) {
 	var pic Picture
 	err := db.QueryRow(
-		"SELECT id, url, storage_key, hash, upload_date, deleted FROM pictures WHERE id = ? AND deleted = 0",
+		"SELECT id, url, storage_key, hash, description, upload_date, deleted FROM pictures WHERE id = ? AND deleted = 0",
 		id,
-	).Scan(&pic.ID, &pic.URL, &pic.StorageKey, &pic.Hash, &pic.UploadDate, &pic.Deleted)
+	).Scan(&pic.ID, &pic.URL, &pic.StorageKey, &pic.Hash, &pic.Description, &pic.UploadDate, &pic.Deleted)
 
 	if err != nil {
 		return nil, err
@@ -52,6 +53,12 @@ func GetPicture(db *sql.DB, id string) (*Picture, error) {
 // DeletePicture 软删除图片
 func DeletePicture(db *sql.DB, id string) error {
 	_, err := db.Exec("UPDATE pictures SET deleted = 1 WHERE id = ?", id)
+	return err
+}
+
+// UpdatePictureDescription 更新图片描述
+func UpdatePictureDescription(db *sql.DB, id string, description string) error {
+	_, err := db.Exec("UPDATE pictures SET description = ? WHERE id = ? AND deleted = 0", description, id)
 	return err
 }
 
@@ -250,7 +257,7 @@ func SearchExact(db *sql.DB, tagNames []string, page, limit int) ([]PictureWithT
 
 	// 构建查询
 	query := `
-		SELECT p.id, p.url, p.storage_key, p.hash, p.upload_date
+		SELECT p.id, p.url, p.storage_key, p.hash, p.description, p.upload_date
 		FROM pictures p
 		WHERE p.deleted = 0 AND p.id IN (
 			SELECT pt.picture_id
@@ -281,7 +288,7 @@ func SearchExact(db *sql.DB, tagNames []string, page, limit int) ([]PictureWithT
 	var results []PictureWithTags
 	for rows.Next() {
 		var pic PictureWithTags
-		if err := rows.Scan(&pic.ID, &pic.URL, &pic.StorageKey, &pic.Hash, &pic.UploadDate); err != nil {
+		if err := rows.Scan(&pic.ID, &pic.URL, &pic.StorageKey, &pic.Hash, &pic.Description, &pic.UploadDate); err != nil {
 			return nil, 0, err
 		}
 
@@ -327,7 +334,7 @@ func SearchRelevance(db *sql.DB, tagNames []string, page, limit int) ([]PictureW
 	}
 
 	query := `
-		SELECT p.id, p.url, p.storage_key, p.hash, p.upload_date, COUNT(DISTINCT pt.tag_id) as matched_count
+		SELECT p.id, p.url, p.storage_key, p.hash, p.description, p.upload_date, COUNT(DISTINCT pt.tag_id) as matched_count
 		FROM pictures p
 		JOIN picture_tags pt ON p.id = pt.picture_id
 		JOIN tags t ON pt.tag_id = t.id
@@ -353,7 +360,7 @@ func SearchRelevance(db *sql.DB, tagNames []string, page, limit int) ([]PictureW
 	var results []PictureWithTags
 	for rows.Next() {
 		var pic PictureWithTags
-		if err := rows.Scan(&pic.ID, &pic.URL, &pic.StorageKey, &pic.Hash, &pic.UploadDate, &pic.MatchedTagCount); err != nil {
+		if err := rows.Scan(&pic.ID, &pic.URL, &pic.StorageKey, &pic.Hash, &pic.Description, &pic.UploadDate, &pic.MatchedTagCount); err != nil {
 			return nil, 0, err
 		}
 

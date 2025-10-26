@@ -37,6 +37,7 @@ func createTables(db *sql.DB) error {
 		url TEXT NOT NULL,
 		storage_key TEXT NOT NULL,
 		hash TEXT NOT NULL,
+		description TEXT,
 		upload_date DATETIME DEFAULT CURRENT_TIMESTAMP,
 		deleted INTEGER DEFAULT 0
 	);

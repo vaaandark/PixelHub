@@ -59,6 +59,12 @@ async function uploadFile(file) {
     const formData = new FormData();
     formData.append('file', file);
     
+    // 添加描述（如果有）
+    const description = document.getElementById('uploadDescription').value.trim();
+    if (description) {
+        formData.append('description', description);
+    }
+    
     try {
         uploadResult.classList.remove('hidden', 'error');
         uploadResult.textContent = '上传中...';
@@ -71,14 +77,15 @@ async function uploadFile(file) {
         const data = await response.json();
         
         if (data.code === 201) {
-            uploadResult.textContent = `上传成功！图片 ID: ${data.data.image_id}`;
             uploadResult.innerHTML = `
                 <p>✅ 上传成功！</p>
                 <p><strong>图片 ID:</strong> ${data.data.image_id}</p>
                 <p><strong>URL:</strong> <a href="${data.data.url}" target="_blank">${data.data.url}</a></p>
+                ${data.data.description ? `<p><strong>描述:</strong> ${data.data.description}</p>` : ''}
                 <button onclick="showImageDetail('${data.data.image_id}')" class="btn btn-secondary" style="margin-top: 0.5rem;">添加标签</button>
             `;
             fileInput.value = '';
+            document.getElementById('uploadDescription').value = '';
         } else {
             throw new Error(data.message);
         }
@@ -189,6 +196,7 @@ function initModal() {
         }
     });
     
+    document.getElementById('updateDescriptionBtn').addEventListener('click', updateDescription);
     document.getElementById('setTagsBtn').addEventListener('click', () => updateTags('set'));
     document.getElementById('appendTagsBtn').addEventListener('click', () => updateTags('append'));
     document.getElementById('deleteImageBtn').addEventListener('click', deleteImage);
@@ -209,6 +217,10 @@ async function showImageDetail(imageId) {
             document.getElementById('modalImageUrl').href = info.url;
             document.getElementById('modalUploadDate').textContent = new Date(info.upload_date).toLocaleString();
             
+            // 显示描述
+            document.getElementById('modalDescription').textContent = info.description || '';
+            document.getElementById('newDescription').value = info.description || '';
+            
             const tagsHTML = info.tags && info.tags.length > 0
                 ? info.tags.map(tag => `<span class="tag">${tag}</span>`).join('')
                 : '<p style="color: var(--text-muted);">暂无标签</p>';
@@ -224,6 +236,35 @@ async function showImageDetail(imageId) {
 function closeModal() {
     imageModal.classList.add('hidden');
     currentImageId = null;
+}
+
+async function updateDescription() {
+    const newDescription = document.getElementById('newDescription').value.trim();
+    if (!newDescription) {
+        alert('请输入描述');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/images/${currentImageId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ description: newDescription })
+        });
+        
+        const data = await response.json();
+        
+        if (data.code === 200) {
+            alert('描述更新成功！');
+            showImageDetail(currentImageId);
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        alert(`更新描述失败: ${error.message}`);
+    }
 }
 
 async function updateTags(mode) {

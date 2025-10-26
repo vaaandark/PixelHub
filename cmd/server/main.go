@@ -58,8 +58,9 @@ func main() {
 	{
 		// 图片管理
 		api.POST("/images/upload", h.UploadImage)
-		api.DELETE("/images/:image_id", h.DeleteImage)
 		api.GET("/images/:image_id", h.GetImageDetail)
+		api.PUT("/images/:image_id", h.UpdateImageDescription)
+		api.DELETE("/images/:image_id", h.DeleteImage)
 
 		// 标签管理
 		api.PUT("/images/:image_id/tags", h.UpdateImageTags)

@@ -1,6 +1,23 @@
 ---
+description: project overview
 alwaysApply: true
 ---
 
-- 前端服务使用 JavaScript 编写，后端服务使用 Golang 编写
-- 图片存储需要的读写接口应当抽象成 interface，目前选用的腾讯云对象存储服务应该只是其中一种 provider 实现
+PixelHub 是一个集成了标签(Tag)和 MCP server 功能的图床服务。
+
+**核心功能**：
+- 图片上传与管理（支持描述信息）
+- 标签系统（多标签支持）
+- 智能搜索（精确匹配 AND、相关性排序 OR）
+- MCP 服务接口（供 AI 应用调用）
+
+**技术栈**：
+- 前端：原生 JavaScript (ES6+)、HTML5、CSS3
+- 后端：Go 1.21+、Gin Web Framework
+- 数据库：SQLite 3
+- 存储：腾讯云 COS（抽象接口，可扩展）
+
+**注意事项**：
+- 图片存储需要的读写接口已抽象成 interface，腾讯云 COS 是其中一种 provider 实现
+- 更新项目时要注意同步更新 rules 和文档中过时的部分，不要简单地追加
+- 图片除了标签外还有 description 字段用于存储图片描述

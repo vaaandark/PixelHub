@@ -15,11 +15,12 @@ alwaysApply: false
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
-| `POST` | `/images/upload` | 上传图片文件，返回下载 URL。 |
+| `POST` | `/images/upload` | 上传图片文件，可选添加描述，返回图片 URL。 |
 
 | 参数 | 位置 | 类型 | 描述 | 必填 |
 | :--- | :--- | :--- | :--- | :--- |
 | `file` | Body (FormData) | File | 要上传的图片文件。 | 是 |
+| `description` | Body (FormData) | String | 图片描述信息。 | 否 |
 
 **成功响应 (201 Created):**
 
@@ -30,7 +31,8 @@ alwaysApply: false
   "data": {
     "image_id": "img_a1b2c3d4",
     "url": "https://cdn.your-imagehost.com/a1b2c3d4.jpg",
-    "hash": "e6884675b87..." 
+    "hash": "e6884675b87...",
+    "description": "美丽的风景照片"
   }
 }
 ```
@@ -45,11 +47,47 @@ alwaysApply: false
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
-| `GET` | `/images/{image_id}` | 获取图片元数据和当前标签。 |
+| `GET` | `/images/{image_id}` | 获取图片的完整信息，包括 URL、描述、标签等元数据。 |
+
+**成功响应 (200 OK):**
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "image_id": "img_a1b2c3d4",
+    "url": "https://cdn.your-imagehost.com/a1b2c3d4.jpg",
+    "hash": "e6884675b87...",
+    "description": "美丽的风景照片",
+    "upload_date": "2025-10-26T12:00:00Z",
+    "tags": ["风景", "自然"]
+  }
+}
+```
+
+#### 4\. 更新图片信息
+
+| 方法 | 路径 | 描述 |
+| :--- | :--- | :--- |
+| `PUT` | `/images/{image_id}` | 更新图片的描述信息。 |
+
+| 参数 | 位置 | 类型 | 描述 | 必填 |
+| :--- | :--- | :--- | :--- | :--- |
+| `description` | Body | String | 新的图片描述。 | 是 |
+
+**成功响应 (200 OK):**
+
+```json
+{
+  "code": 200,
+  "message": "Description updated successfully"
+}
+```
 
 ### B. 标签管理与查询 (Tag Management & Query)
 
-#### 6\. 给图片打标签
+#### 5\. 给图片打标签
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -60,7 +98,7 @@ alwaysApply: false
 | `tags` | Body | String Array | 新的标签列表。 | 是 |
 | `mode` | Body | String | **'set'** (替换所有标签) 或 **'append'** (追加新标签)。 | 否 (默认'set') |
 
-#### 7\. 列出所有标签
+#### 6\. 列出所有标签
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -89,7 +127,7 @@ alwaysApply: false
 }
 ```
 
-#### 8\. 查询（精确匹配 AND）
+#### 7\. 查询（精确匹配 AND）
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -152,16 +190,17 @@ alwaysApply: false
     {
       "image_id": "img_x1y2z3a4",
       "url": "https://cdn.your-imagehost.com/x1y2z3a4.jpg",
+      "description": "可爱的猫咪",
       "matched_tag_count": 3,
       "tags": ["cat", "cute", "pet"] 
     },
     {
       "image_id": "img_b5c6d7e8",
       "url": "https://cdn.your-imagehost.com/b5c6d7e8.jpg",
+      "description": "动物照片",
       "matched_tag_count": 2,
       "tags": ["cat", "animal"] 
     }
-    // ... more results
   ]
 }
 ```

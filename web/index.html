@@ -29,6 +29,9 @@
                         <p class="hint">支持 JPG、PNG、GIF 等格式</p>
                     </div>
                 </div>
+                <div class="upload-description">
+                    <input type="text" id="uploadDescription" placeholder="添加图片描述（可选）">
+                </div>
                 <div id="uploadResult" class="upload-result hidden"></div>
             </section>
 
@@ -74,6 +77,13 @@
                     <p><strong>ID:</strong> <span id="modalImageId"></span></p>
                     <p><strong>URL:</strong> <a id="modalImageUrl" href="" target="_blank"></a></p>
                     <p><strong>上传时间:</strong> <span id="modalUploadDate"></span></p>
+                    
+                    <h4>描述</h4>
+                    <p id="modalDescription" class="image-description"></p>
+                    <div class="description-edit">
+                        <input type="text" id="newDescription" placeholder="输入新描述">
+                        <button id="updateDescriptionBtn" class="btn btn-primary">更新描述</button>
+                    </div>
                     
                     <h4>标签</h4>
                     <div id="modalTags" class="modal-tags"></div>
