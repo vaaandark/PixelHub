@@ -241,6 +241,85 @@ func (h *Handler) DeleteImage(c *gin.Context) {
 	})
 }
 
+// BatchDeleteImages 批量删除图片
+func (h *Handler) BatchDeleteImages(c *gin.Context) {
+	// 解析请求体
+	var req struct {
+		ImageIDs []string `json:"image_ids" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Code:    400,
+			Message: "Invalid request body",
+		})
+		return
+	}
+
+	if len(req.ImageIDs) == 0 {
+		c.JSON(http.StatusBadRequest, Response{
+			Code:    400,
+			Message: "No image IDs provided",
+		})
+		return
+	}
+
+	// 批量删除结果
+	type DeleteResult struct {
+		ImageID string `json:"image_id"`
+		Status  string `json:"status"`
+		Error   string `json:"error,omitempty"`
+	}
+
+	results := make([]DeleteResult, 0, len(req.ImageIDs))
+	successCount := 0
+	failedCount := 0
+
+	// 逐个删除图片
+	for _, imageID := range req.ImageIDs {
+		result := DeleteResult{
+			ImageID: imageID,
+		}
+
+		// 获取图片信息
+		pic, err := database.GetPicture(h.db, imageID)
+		if err != nil {
+			result.Status = "failed"
+			result.Error = "Image not found"
+			failedCount++
+			results = append(results, result)
+			continue
+		}
+
+		// 删除图片（软删除）
+		if err := database.DeletePicture(h.db, imageID); err != nil {
+			result.Status = "failed"
+			result.Error = fmt.Sprintf("Failed to delete from database: %v", err)
+			failedCount++
+			results = append(results, result)
+			continue
+		}
+
+		// 从存储删除文件（不需要等待结果）
+		go h.storage.Delete(pic.StorageKey)
+
+		result.Status = "success"
+		successCount++
+		results = append(results, result)
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Code:    200,
+		Message: "Batch delete completed",
+		Data: map[string]interface{}{
+			"total":   len(req.ImageIDs),
+			"success": successCount,
+			"failed":  failedCount,
+			"results": results,
+		},
+	})
+}
+
 // ListImages 列出所有图片
 func (h *Handler) ListImages(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

@@ -9,6 +9,8 @@ let gallerySort = 'date_desc';
 let totalImages = 0;
 let currentTags = []; // 当前编辑的标签列表
 let batchUploadedImages = []; // 批量上传的图片列表
+let batchDeleteMode = false; // 批量删除模式
+let selectedImages = new Set(); // 选中的图片 ID 集合
 
 // DOM 元素
 const uploadArea = document.getElementById('uploadArea');
@@ -233,6 +235,11 @@ function initGallery() {
         }
     });
     
+    // 批量删除按钮
+    document.getElementById('batchDeleteBtn').addEventListener('click', enterBatchDeleteMode);
+    document.getElementById('cancelBatchDeleteBtn').addEventListener('click', exitBatchDeleteMode);
+    document.getElementById('confirmDeleteBtn').addEventListener('click', confirmBatchDelete);
+    
     // 初始加载
     loadGallery();
 }
@@ -275,7 +282,17 @@ async function loadGallery() {
 function displayGallery(images) {
     const galleryGrid = document.getElementById('galleryGrid');
     galleryGrid.innerHTML = images.map(img => `
-        <div class="result-item" onclick="showImageDetail('${img.id}')">
+        <div class="result-item ${batchDeleteMode ? 'batch-delete-mode' : ''}" 
+             ${batchDeleteMode ? `onclick="toggleImageSelectionByClick('${img.id}')"` : `onclick="showImageDetail('${img.id}')"`}>
+            ${batchDeleteMode ? `
+                <div class="batch-checkbox-wrapper">
+                    <input type="checkbox" 
+                           class="batch-checkbox" 
+                           id="checkbox_${img.id}"
+                           data-image-id="${img.id}"
+                           ${selectedImages.has(img.id) ? 'checked' : ''}>
+                </div>
+            ` : ''}
             <img src="${img.url}" alt="${img.description || '图片'}">
             <div class="result-item-info">
                 ${img.description ? `<p style="margin-bottom: 0.5rem; color: var(--text-color); font-size: 0.9rem;">${img.description}</p>` : ''}
@@ -736,6 +753,124 @@ async function saveBatchEdits() {
     } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = '保存全部';
+    }
+}
+
+// ==================== 批量删除功能 ====================
+
+// 进入批量删除模式
+function enterBatchDeleteMode() {
+    batchDeleteMode = true;
+    selectedImages.clear();
+    
+    // 显示/隐藏相关按钮
+    document.getElementById('batchDeleteBtn').classList.add('hidden');
+    document.getElementById('batchDeleteActions').classList.remove('hidden');
+    
+    // 更新选中计数
+    updateSelectedCount();
+    
+    // 重新渲染图片列表（显示复选框）
+    loadGallery();
+}
+
+// 退出批量删除模式
+function exitBatchDeleteMode() {
+    batchDeleteMode = false;
+    selectedImages.clear();
+    
+    // 显示/隐藏相关按钮
+    document.getElementById('batchDeleteBtn').classList.remove('hidden');
+    document.getElementById('batchDeleteActions').classList.add('hidden');
+    
+    // 重新渲染图片列表（隐藏复选框）
+    loadGallery();
+}
+
+// 通过点击图片切换选择状态
+function toggleImageSelectionByClick(imageId) {
+    const checkbox = document.getElementById(`checkbox_${imageId}`);
+    if (checkbox) {
+        // 切换复选框状态
+        checkbox.checked = !checkbox.checked;
+        
+        // 更新选中集合
+        if (checkbox.checked) {
+            selectedImages.add(imageId);
+        } else {
+            selectedImages.delete(imageId);
+        }
+        updateSelectedCount();
+    }
+}
+
+// 切换图片选择状态（保留用于其他场景）
+function toggleImageSelection(imageId, checked) {
+    if (checked) {
+        selectedImages.add(imageId);
+    } else {
+        selectedImages.delete(imageId);
+    }
+    updateSelectedCount();
+}
+
+// 更新选中计数显示
+function updateSelectedCount() {
+    document.getElementById('selectedCount').textContent = selectedImages.size;
+}
+
+// 确认批量删除
+async function confirmBatchDelete() {
+    if (selectedImages.size === 0) {
+        alert('请先选择要删除的图片');
+        return;
+    }
+    
+    if (!confirm(`确定要删除选中的 ${selectedImages.size} 张图片吗？\n此操作不可恢复！`)) {
+        return;
+    }
+    
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = '删除中...';
+    
+    try {
+        const imageIds = Array.from(selectedImages);
+        
+        const response = await fetch(`${API_BASE}/images/batch-delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ image_ids: imageIds })
+        });
+        
+        const data = await response.json();
+        
+        if (data.code === 200) {
+            const { total, success, failed } = data.data;
+            
+            if (failed === 0) {
+                alert(`✅ 删除成功！共删除 ${success} 张图片`);
+            } else {
+                const failedList = data.data.results
+                    .filter(r => r.status === 'failed')
+                    .map(r => `${r.image_id}: ${r.error}`)
+                    .join('\n');
+                alert(`⚠️ 删除完成\n成功: ${success} 张\n失败: ${failed} 张\n\n失败详情:\n${failedList}`);
+            }
+            
+            // 退出批量删除模式并刷新
+            exitBatchDeleteMode();
+            loadTags();
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        alert(`批量删除失败: ${error.message}`);
+    } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = '删除选中';
     }
 }
 

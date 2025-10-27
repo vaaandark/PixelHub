@@ -61,11 +61,21 @@
             <section class="gallery-section card">
                 <h2>📷 全部图片</h2>
                 <div class="gallery-controls">
-                    <select id="sortSelect" class="sort-select">
-                        <option value="date_desc">最新优先</option>
-                        <option value="date_asc">最旧优先</option>
-                    </select>
-                    <span class="gallery-stats">共 <span id="totalImages">0</span> 张图片</span>
+                    <div class="gallery-left-controls">
+                        <select id="sortSelect" class="sort-select">
+                            <option value="date_desc">最新优先</option>
+                            <option value="date_asc">最旧优先</option>
+                        </select>
+                        <span class="gallery-stats">共 <span id="totalImages">0</span> 张图片</span>
+                    </div>
+                    <div class="gallery-right-controls">
+                        <button id="batchDeleteBtn" class="btn btn-secondary">批量删除</button>
+                        <div id="batchDeleteActions" class="batch-delete-actions hidden">
+                            <span class="selected-count">已选择 <strong id="selectedCount">0</strong> 张</span>
+                            <button id="confirmDeleteBtn" class="btn btn-danger">删除选中</button>
+                            <button id="cancelBatchDeleteBtn" class="btn btn-secondary">取消</button>
+                        </div>
+                    </div>
                 </div>
                 <div id="galleryGrid" class="results-grid"></div>
                 <div class="gallery-pagination">

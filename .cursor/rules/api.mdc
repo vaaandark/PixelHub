@@ -178,9 +178,60 @@ alwaysApply: false
 }
 ```
 
+---
+
+#### 7\. 批量删除图片
+
+| 方法 | 路径 | 描述 |
+| :--- | :--- | :--- |
+| `POST` | `/images/batch-delete` | 批量删除多张图片（软删除）。 |
+
+| 参数 | 位置 | 类型 | 描述 | 必填 |
+| :--- | :--- | :--- | :--- | :--- |
+| `image_ids` | Body | String Array | 要删除的图片 ID 列表。 | 是 |
+
+**请求示例**
+
+```json
+{
+  "image_ids": ["img_a1b2c3d4", "img_b2c3d4e5", "img_c3d4e5f6"]
+}
+```
+
+**成功响应 (200 OK):**
+
+```json
+{
+  "code": 200,
+  "message": "Batch delete completed",
+  "data": {
+    "total": 3,
+    "success": 2,
+    "failed": 1,
+    "results": [
+      {
+        "image_id": "img_a1b2c3d4",
+        "status": "success"
+      },
+      {
+        "image_id": "img_b2c3d4e5",
+        "status": "success"
+      },
+      {
+        "image_id": "img_c3d4e5f6",
+        "status": "failed",
+        "error": "Image not found"
+      }
+    ]
+  }
+}
+```
+
+---
+
 ### B. 标签管理与查询 (Tag Management & Query)
 
-#### 7\. 给图片打标签
+#### 8\. 给图片打标签
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -191,7 +242,7 @@ alwaysApply: false
 | `tags` | Body | String Array | 新的标签列表。 | 是 |
 | `mode` | Body | String | **'set'** (替换所有标签) 或 **'append'** (追加新标签)。 | 否 (默认'set') |
 
-#### 8\. 列出所有标签
+#### 9\. 列出所有标签
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -220,7 +271,7 @@ alwaysApply: false
 }
 ```
 
-#### 9\. 精确搜索（AND 逻辑）
+#### 10\. 精确搜索（AND 逻辑）
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -252,7 +303,7 @@ alwaysApply: false
 }
 ```
 
-#### 10\. 相关性搜索（OR 逻辑）
+#### 11\. 相关性搜索（OR 逻辑）
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |

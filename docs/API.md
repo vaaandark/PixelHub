@@ -338,7 +338,68 @@ curl -X DELETE http://localhost:8080/api/v1/images/img_a1b2c3d4
 
 ---
 
-### 8. 列出所有标签
+### 8. 批量删除图片
+
+批量删除多个图片（软删除）。
+
+**请求**
+```http
+POST /api/v1/images/batch-delete
+Content-Type: application/json
+
+{
+  "image_ids": ["img_a1b2c3d4", "img_b2c3d4e5", "img_c3d4e5f6"]
+}
+```
+
+**请求参数**
+- `image_ids` (required): 要删除的图片 ID 列表
+
+**响应**
+```json
+{
+  "code": 200,
+  "message": "Batch delete completed",
+  "data": {
+    "total": 3,
+    "success": 2,
+    "failed": 1,
+    "results": [
+      {
+        "image_id": "img_a1b2c3d4",
+        "status": "success"
+      },
+      {
+        "image_id": "img_b2c3d4e5",
+        "status": "success"
+      },
+      {
+        "image_id": "img_c3d4e5f6",
+        "status": "failed",
+        "error": "Image not found"
+      }
+    ]
+  }
+}
+```
+
+**说明**
+- 每个图片独立删除，部分失败不影响其他图片
+- 返回每个图片的删除状态
+- 软删除：图片在数据库中标记为已删除，但物理文件会异步删除
+
+**cURL 示例**
+```bash
+curl -X POST http://localhost:8080/api/v1/images/batch-delete \
+  -H "Content-Type: application/json" \
+  -d '{
+    "image_ids": ["img_a1b2c3d4", "img_b2c3d4e5", "img_c3d4e5f6"]
+  }'
+```
+
+---
+
+### 9. 列出所有标签
 
 获取系统中所有标签的列表（按使用次数排序）。
 
@@ -375,7 +436,7 @@ curl "http://localhost:8080/api/v1/tags?page=1&limit=50"
 
 ---
 
-### 9. 精确搜索图片
+### 10. 精确搜索图片
 
 使用 AND 逻辑搜索包含所有指定标签的图片。
 
@@ -418,7 +479,7 @@ curl "http://localhost:8080/api/v1/search/exact?tags=风景,自然&page=1&limit=
 
 ---
 
-### 10. 相关性搜索图片
+### 11. 相关性搜索图片
 
 使用 OR 逻辑搜索，返回包含任一标签的图片，按匹配标签数降序排列。
 

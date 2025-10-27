@@ -748,3 +748,151 @@ body {
     }
 }
 
+/* ==================== 批量删除样式 ==================== */
+
+.gallery-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.gallery-left-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.gallery-right-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.batch-delete-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.batch-delete-actions.hidden {
+    display: none;
+}
+
+.selected-count {
+    color: var(--text-color);
+    font-size: 0.95rem;
+}
+
+.selected-count strong {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+/* 批量删除模式下的图片样式 */
+.result-item.batch-delete-mode {
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.result-item.batch-delete-mode:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    border-color: var(--primary-color);
+}
+
+.batch-checkbox-wrapper {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 10;
+    padding: 4px;
+}
+
+.batch-checkbox {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    outline: none;
+    transition: all 0.2s ease;
+    pointer-events: none; /* 禁用直接点击，通过父容器控制 */
+    position: relative;
+}
+
+/* 未选中时悬浮效果 */
+.result-item.batch-delete-mode:hover .batch-checkbox:not(:checked) {
+    border-color: var(--primary-color);
+    background: rgba(99, 102, 241, 0.2);
+}
+
+/* 选中状态的复选框 */
+.batch-checkbox:checked {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* 选中时的勾选标记 */
+.batch-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 3px;
+    width: 6px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* 选中状态的图片高亮 */
+.result-item.batch-delete-mode:has(.batch-checkbox:checked) {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .gallery-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .gallery-left-controls,
+    .gallery-right-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .batch-delete-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .batch-checkbox-wrapper {
+        top: 8px;
+        left: 8px;
+        padding: 3px;
+    }
+    
+    .batch-checkbox {
+        width: 22px;
+        height: 22px;
+    }
+    
+    .batch-checkbox:checked::after {
+        left: 6px;
+        top: 2px;
+        width: 5px;
+        height: 9px;
+    }
+}
+
