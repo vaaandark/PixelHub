@@ -7,6 +7,7 @@ let tagsPage = 1;
 let galleryPage = 1;
 let gallerySort = 'date_desc';
 let totalImages = 0;
+let currentTags = []; // 当前编辑的标签列表
 
 // DOM 元素
 const uploadArea = document.getElementById('uploadArea');
@@ -297,9 +298,16 @@ function initModal() {
     });
     
     document.getElementById('updateDescriptionBtn').addEventListener('click', updateDescription);
-    document.getElementById('setTagsBtn').addEventListener('click', () => updateTags('set'));
-    document.getElementById('appendTagsBtn').addEventListener('click', () => updateTags('append'));
+    document.getElementById('addTagBtn').addEventListener('click', addNewTags);
+    document.getElementById('saveTagsBtn').addEventListener('click', saveTags);
     document.getElementById('deleteImageBtn').addEventListener('click', deleteImage);
+    
+    // 支持回车键添加标签
+    document.getElementById('newTagInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            addNewTags();
+        }
+    });
 }
 
 async function showImageDetail(imageId) {
@@ -321,10 +329,10 @@ async function showImageDetail(imageId) {
             document.getElementById('modalDescription').textContent = info.description || '';
             document.getElementById('newDescription').value = info.description || '';
             
-            const tagsHTML = info.tags && info.tags.length > 0
-                ? info.tags.map(tag => `<span class="tag">${tag}</span>`).join('')
-                : '<p style="color: var(--text-muted);">暂无标签</p>';
-            document.getElementById('modalTags').innerHTML = tagsHTML;
+            // 初始化标签编辑器
+            currentTags = info.tags ? [...info.tags] : [];
+            renderEditableTags();
+            document.getElementById('newTagInput').value = '';
             
             imageModal.classList.remove('hidden');
         }
@@ -368,14 +376,71 @@ async function updateDescription() {
     }
 }
 
-async function updateTags(mode) {
-    const newTags = document.getElementById('newTags').value.trim();
-    if (!newTags) {
-        alert('请输入标签');
+// 渲染可编辑的标签列表
+function renderEditableTags() {
+    const container = document.getElementById('editableTags');
+    
+    if (currentTags.length === 0) {
+        container.innerHTML = '';
         return;
     }
     
-    const tags = newTags.split(',').map(t => t.trim()).filter(t => t);
+    container.innerHTML = currentTags.map((tag, index) => `
+        <div class="editable-tag">
+            <span>${escapeHtml(tag)}</span>
+            <span class="tag-remove" data-index="${index}">✕</span>
+        </div>
+    `).join('');
+    
+    // 添加删除事件监听
+    container.querySelectorAll('.tag-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            currentTags.splice(index, 1);
+            renderEditableTags();
+        });
+    });
+}
+
+// HTML 转义函数，防止 XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 添加新标签
+function addNewTags() {
+    const input = document.getElementById('newTagInput');
+    const value = input.value.trim();
+    
+    if (!value) {
+        return;
+    }
+    
+    // 支持多种分隔符：逗号、分号、空格
+    const newTags = value.split(/[,;，；\s]+/)
+        .map(t => t.trim())
+        .filter(t => t && !currentTags.includes(t)); // 去重
+    
+    if (newTags.length === 0) {
+        alert('标签已存在或无效');
+        return;
+    }
+    
+    currentTags.push(...newTags);
+    renderEditableTags();
+    input.value = '';
+    input.focus();
+}
+
+// 保存标签更改
+async function saveTags() {
+    if (currentTags.length === 0) {
+        if (!confirm('确定要清空所有标签吗？')) {
+            return;
+        }
+    }
     
     try {
         const response = await fetch(`${API_BASE}/images/${currentImageId}/tags`, {
@@ -383,14 +448,16 @@ async function updateTags(mode) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ tags, mode })
+            body: JSON.stringify({ 
+                tags: currentTags, 
+                mode: 'set' 
+            })
         });
         
         const data = await response.json();
         
         if (data.code === 200) {
-            alert('标签更新成功！');
-            document.getElementById('newTags').value = '';
+            alert('标签保存成功！');
             showImageDetail(currentImageId);
             loadTags(); // 重新加载标签列表
             loadGallery(); // 刷新图片列表
@@ -398,7 +465,7 @@ async function updateTags(mode) {
             throw new Error(data.message);
         }
     } catch (error) {
-        alert(`更新标签失败: ${error.message}`);
+        alert(`保存标签失败: ${error.message}`);
     }
 }
 

@@ -103,15 +103,13 @@
                         <button id="updateDescriptionBtn" class="btn btn-primary">更新描述</button>
                     </div>
                     
-                    <h4>标签</h4>
-                    <div id="modalTags" class="modal-tags"></div>
-                    
-                    <h4>编辑标签</h4>
-                    <div class="tag-edit">
-                        <input type="text" id="newTags" placeholder="输入新标签，用逗号分隔">
-                        <div class="tag-edit-buttons">
-                            <button id="setTagsBtn" class="btn btn-primary">替换标签</button>
-                            <button id="appendTagsBtn" class="btn btn-secondary">追加标签</button>
+                    <h4>标签管理</h4>
+                    <div class="tags-editor">
+                        <div id="editableTags" class="editable-tags"></div>
+                        <div class="tags-editor-controls">
+                            <input type="text" id="newTagInput" placeholder="添加标签（可用逗号、分号分隔多个）">
+                            <button id="addTagBtn" class="btn btn-icon" title="添加标签">➕</button>
+                            <button id="saveTagsBtn" class="btn btn-success" title="保存更改">✓</button>
                         </div>
                     </div>
                     
