@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/vaaandark/PixelHub/internal/database"
 	"github.com/vaaandark/PixelHub/internal/storage"
 )
@@ -73,8 +74,8 @@ func (h *Handler) UploadImage(c *gin.Context) {
 	hasher.Write(fileContent)
 	hash := hex.EncodeToString(hasher.Sum(nil))
 
-	// 生成唯一 ID（使用哈希的前 12 位）
-	imageID := "img_" + hash[:12]
+	// 生成唯一 ID（使用 UUID）
+	imageID := "img_" + uuid.New().String()
 
 	// 生成存储 key
 	ext := filepath.Ext(file.Filename)
