@@ -18,7 +18,7 @@ type Picture struct {
 type Tag struct {
 	ID      int    `json:"id"`
 	TagName string `json:"tag_name"`
-	Count   int    `json:"count"`
+	Count   int    `json:"count"` // 动态计算，不存储在数据库
 }
 
 type PictureWithTags struct {
@@ -120,7 +120,7 @@ func GetOrCreateTag(db *sql.DB, tagName string) (int, error) {
 
 	if err == sql.ErrNoRows {
 		// 标签不存在，创建新标签
-		result, err := db.Exec("INSERT INTO tags (tag_name, count) VALUES (?, 0)", tagName)
+		result, err := db.Exec("INSERT INTO tags (tag_name) VALUES (?)", tagName)
 		if err != nil {
 			return 0, err
 		}
@@ -139,35 +139,9 @@ func SetPictureTags(db *sql.DB, pictureID string, tagNames []string) error {
 	}
 	defer tx.Rollback()
 
-	// 获取旧标签并减少计数
-	rows, err := tx.Query(`
-		SELECT tag_id FROM picture_tags WHERE picture_id = ?
-	`, pictureID)
-	if err != nil {
-		return err
-	}
-
-	var oldTagIDs []int
-	for rows.Next() {
-		var tagID int
-		if err := rows.Scan(&tagID); err != nil {
-			rows.Close()
-			return err
-		}
-		oldTagIDs = append(oldTagIDs, tagID)
-	}
-	rows.Close()
-
 	// 删除旧关联
 	if _, err := tx.Exec("DELETE FROM picture_tags WHERE picture_id = ?", pictureID); err != nil {
 		return err
-	}
-
-	// 减少旧标签计数
-	for _, tagID := range oldTagIDs {
-		if _, err := tx.Exec("UPDATE tags SET count = count - 1 WHERE id = ?", tagID); err != nil {
-			return err
-		}
 	}
 
 	// 添加新标签
@@ -179,11 +153,6 @@ func SetPictureTags(db *sql.DB, pictureID string, tagNames []string) error {
 
 		// 创建新关联
 		if _, err := tx.Exec("INSERT INTO picture_tags (picture_id, tag_id) VALUES (?, ?)", pictureID, tagID); err != nil {
-			return err
-		}
-
-		// 增加标签计数
-		if _, err := tx.Exec("UPDATE tags SET count = count + 1 WHERE id = ?", tagID); err != nil {
 			return err
 		}
 	}
@@ -217,11 +186,6 @@ func AppendPictureTags(db *sql.DB, pictureID string, tagNames []string) error {
 			if _, err := tx.Exec("INSERT INTO picture_tags (picture_id, tag_id) VALUES (?, ?)", pictureID, tagID); err != nil {
 				return err
 			}
-
-			// 增加标签计数
-			if _, err := tx.Exec("UPDATE tags SET count = count + 1 WHERE id = ?", tagID); err != nil {
-				return err
-			}
 		}
 	}
 
@@ -233,7 +197,7 @@ func getOrCreateTagTx(tx *sql.Tx, tagName string) (int, error) {
 	err := tx.QueryRow("SELECT id FROM tags WHERE tag_name = ?", tagName).Scan(&tagID)
 
 	if err == sql.ErrNoRows {
-		result, err := tx.Exec("INSERT INTO tags (tag_name, count) VALUES (?, 0)", tagName)
+		result, err := tx.Exec("INSERT INTO tags (tag_name) VALUES (?)", tagName)
 		if err != nil {
 			return 0, err
 		}
@@ -270,19 +234,31 @@ func GetPictureTags(db *sql.DB, pictureID string) ([]string, error) {
 
 // ListTags 列出所有标签（分页）
 func ListTags(db *sql.DB, page, limit int) ([]Tag, int, error) {
-	// 获取总数
+	// 获取总数（只统计有图片关联的标签）
 	var total int
-	err := db.QueryRow("SELECT COUNT(*) FROM tags WHERE count > 0").Scan(&total)
+	err := db.QueryRow(`
+		SELECT COUNT(DISTINCT t.id) 
+		FROM tags t
+		JOIN picture_tags pt ON t.id = pt.tag_id
+		JOIN pictures p ON pt.picture_id = p.id
+		WHERE p.deleted = 0
+	`).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// 获取标签列表
+	// 获取标签列表，按使用次数降序排列
 	offset := (page - 1) * limit
-	rows, err := db.Query(
-		"SELECT id, tag_name, count FROM tags WHERE count > 0 ORDER BY count DESC LIMIT ? OFFSET ?",
-		limit, offset,
-	)
+	rows, err := db.Query(`
+		SELECT t.id, t.tag_name, COUNT(pt.picture_id) as count
+		FROM tags t
+		JOIN picture_tags pt ON t.id = pt.tag_id
+		JOIN pictures p ON pt.picture_id = p.id
+		WHERE p.deleted = 0
+		GROUP BY t.id, t.tag_name
+		ORDER BY count DESC
+		LIMIT ? OFFSET ?
+	`, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}

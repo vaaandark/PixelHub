@@ -44,8 +44,7 @@ func createTables(db *sql.DB) error {
 
 	CREATE TABLE IF NOT EXISTS tags (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		tag_name TEXT UNIQUE NOT NULL,
-		count INTEGER DEFAULT 0
+		tag_name TEXT UNIQUE NOT NULL
 	);
 
 	CREATE TABLE IF NOT EXISTS picture_tags (

@@ -8,7 +8,7 @@ alwaysApply: false
 | 表名 | 作用 | 字段 | 说明 |
 | --- | --- | --- | --- |
 | pictures (图片表) | 存储图片的基本信息 | id (PK, TEXT)<br>url (TEXT)<br>storage_key (TEXT)<br>hash (TEXT)<br>description (TEXT, 可选)<br>upload_date (DATETIME)<br>deleted (INTEGER) | 存储图片的核心信息，description 字段用于存储图片描述 |
-| tags (标签表) | 存储所有唯一的标签名称 | id (PK, INTEGER)<br>tag_name (TEXT, UNIQUE)<br>count (INTEGER) | 确保标签名唯一，count 记录标签使用次数 |
+| tags (标签表) | 存储所有唯一的标签名称 | id (PK, INTEGER)<br>tag_name (TEXT, UNIQUE) | 确保标签名唯一，使用时动态计算关联图片数量 |
 | picture_tags (关联表) | 关联图片和标签的多对多关系 | picture_id (FK, TEXT)<br>tag_id (FK, INTEGER) | 解决多对多关系，支持通过标签搜索图片 |
 
 **索引设计**：
