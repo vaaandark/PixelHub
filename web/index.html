@@ -123,6 +123,17 @@
                         </div>
                     </div>
                     
+                    <!-- AI 生成标签 -->
+                    <div class="ai-tag-generator-single">
+                        <h4>🤖 AI 自动生成标签</h4>
+                        <div class="ai-tag-controls-single">
+                            <input type="text" id="aiPromptSingle" class="ai-input" placeholder="提示词（留空使用默认）">
+                            <input type="text" id="aiDelimiterSingle" class="ai-input-short" value="," placeholder=",">
+                            <button id="aiGenerateSingleBtn" class="btn btn-success btn-sm">✨ 生成</button>
+                        </div>
+                        <div id="aiStatusSingle" class="ai-status-single"></div>
+                    </div>
+                    
                     <div class="modal-actions">
                         <button id="deleteImageBtn" class="btn btn-danger">删除图片</button>
                     </div>
@@ -141,6 +152,27 @@
                     <p>已上传 <strong id="batchTotalCount">0</strong> 张图片，为每张图片添加描述和标签</p>
                     <button id="batchSaveAllBtn" class="btn btn-primary">保存全部</button>
                 </div>
+                
+                <!-- AI 自动生成标签 -->
+                <div class="ai-tag-generator">
+                    <h4>🤖 AI 自动生成标签</h4>
+                    <div class="ai-tag-controls">
+                        <div class="ai-tag-input-group">
+                            <label for="aiPrompt">提示词（留空使用默认）：</label>
+                            <input type="text" id="aiPrompt" class="ai-input" placeholder="例如：请用 8 个中文词语描述这张图片的主题、色调和氛围，用逗号分隔">
+                        </div>
+                        <div class="ai-tag-input-group">
+                            <label for="aiDelimiter">分隔符：</label>
+                            <input type="text" id="aiDelimiter" class="ai-input-short" value="," placeholder=",">
+                        </div>
+                        <div class="ai-tag-input-group">
+                            <label for="aiConcurrency">并发数：</label>
+                            <input type="number" id="aiConcurrency" class="ai-input-short" value="5" min="1" max="10" placeholder="5">
+                        </div>
+                        <button id="aiGenerateBtn" class="btn btn-success">✨ 自动生成标签</button>
+                    </div>
+                </div>
+                
                 <div id="batchEditList" class="batch-edit-list"></div>
             </div>
         </div>

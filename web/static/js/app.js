@@ -371,6 +371,7 @@ function initModal() {
     document.getElementById('addTagBtn').addEventListener('click', addNewTags);
     document.getElementById('saveTagsBtn').addEventListener('click', saveTags);
     document.getElementById('deleteImageBtn').addEventListener('click', deleteImage);
+    document.getElementById('aiGenerateSingleBtn').addEventListener('click', generateSingleImageTags);
     
     // 支持回车键添加标签
     document.getElementById('newTagInput').addEventListener('keypress', (e) => {
@@ -403,6 +404,11 @@ async function showImageDetail(imageId) {
             currentTags = info.tags ? [...info.tags] : [];
             renderEditableTags();
             document.getElementById('newTagInput').value = '';
+            
+            // 清空 AI 生成状态
+            document.getElementById('aiPromptSingle').value = '';
+            document.getElementById('aiDelimiterSingle').value = ',';
+            document.getElementById('aiStatusSingle').innerHTML = '';
             
             imageModal.classList.remove('hidden');
         }
@@ -614,6 +620,9 @@ function showBatchEdit(images) {
     
     // 绑定保存按钮
     document.getElementById('batchSaveAllBtn').onclick = saveBatchEdits;
+    
+    // 绑定 AI 生成按钮
+    document.getElementById('aiGenerateBtn').onclick = batchGenerateTags;
 }
 
 // 关闭批量编辑模态框
@@ -753,6 +762,236 @@ async function saveBatchEdits() {
     } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = '保存全部';
+    }
+}
+
+// ==================== AI 自动生成标签功能 ====================
+
+// 单图片 AI 生成标签
+async function generateSingleImageTags() {
+    const prompt = document.getElementById('aiPromptSingle').value.trim();
+    const delimiter = document.getElementById('aiDelimiterSingle').value.trim() || ',';
+    const btn = document.getElementById('aiGenerateSingleBtn');
+    const statusDiv = document.getElementById('aiStatusSingle');
+    const tagsEditor = document.querySelector('.tags-editor');
+    
+    if (!currentImageId) {
+        statusDiv.innerHTML = '<div class="ai-status error">✗ 没有选择图片</div>';
+        return;
+    }
+    
+    // 禁用按钮和标签编辑器
+    btn.disabled = true;
+    btn.textContent = '生成中...';
+    tagsEditor.classList.add('ai-loading-single');
+    statusDiv.innerHTML = '<div class="ai-status loading">⏳ AI 正在分析图片...</div>';
+    
+    try {
+        // 调用 AI 生成标签 API
+        const response = await fetch(`${API_BASE}/images/${currentImageId}/tags/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                prompt: prompt || undefined,
+                delimiter: delimiter,
+                mode: 'append'
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.code === 200) {
+            // 成功：更新标签列表
+            const generatedTags = data.data.generated_tags || [];
+            
+            // 合并到 currentTags
+            generatedTags.forEach(tag => {
+                if (!currentTags.includes(tag)) {
+                    currentTags.push(tag);
+                }
+            });
+            
+            // 更新显示
+            renderEditableTags();
+            
+            // 显示成功状态
+            statusDiv.innerHTML = `<div class="ai-status success">✓ 成功生成 ${generatedTags.length} 个标签: ${generatedTags.join(', ')}</div>`;
+            
+            // 3秒后清空状态
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        } else {
+            throw new Error(data.message || '生成失败');
+        }
+    } catch (error) {
+        // 失败：显示错误
+        statusDiv.innerHTML = `<div class="ai-status error">✗ ${error.message}</div>`;
+    } finally {
+        // 恢复按钮和标签编辑器
+        btn.disabled = false;
+        btn.textContent = '✨ 生成';
+        tagsEditor.classList.remove('ai-loading-single');
+    }
+}
+
+// 并发控制辅助函数
+async function runWithConcurrency(tasks, concurrency) {
+    const results = [];
+    const executing = [];
+    
+    for (const [index, task] of tasks.entries()) {
+        const promise = task().then(result => ({
+            index,
+            result,
+            success: true
+        })).catch(error => ({
+            index,
+            error,
+            success: false
+        }));
+        
+        results.push(promise);
+        
+        if (concurrency <= tasks.length) {
+            const executing_promise = promise.then(() => {
+                executing.splice(executing.indexOf(executing_promise), 1);
+            });
+            executing.push(executing_promise);
+            
+            if (executing.length >= concurrency) {
+                await Promise.race(executing);
+            }
+        }
+    }
+    
+    return Promise.all(results);
+}
+
+// 批量 AI 生成标签
+async function batchGenerateTags() {
+    const prompt = document.getElementById('aiPrompt').value.trim();
+    const delimiter = document.getElementById('aiDelimiter').value.trim() || ',';
+    const concurrency = parseInt(document.getElementById('aiConcurrency').value) || 5;
+    const btn = document.getElementById('aiGenerateBtn');
+    
+    if (batchUploadedImages.length === 0) {
+        alert('没有图片需要生成标签');
+        return;
+    }
+    
+    // 验证并发数
+    if (concurrency < 1 || concurrency > 10) {
+        alert('并发数应在 1-10 之间');
+        return;
+    }
+    
+    // 禁用按钮
+    btn.disabled = true;
+    btn.textContent = `生成中(并发${concurrency})...`;
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    try {
+        // 为每个图片设置加载状态
+        for (let i = 0; i < batchUploadedImages.length; i++) {
+            const tagContainer = document.getElementById(`batchTags_${i}`).parentElement;
+            tagContainer.classList.add('ai-loading');
+            
+            // 移除之前的状态提示
+            const oldStatus = tagContainer.querySelector('.ai-status');
+            if (oldStatus) {
+                oldStatus.remove();
+            }
+        }
+        
+        // 创建任务数组
+        const tasks = batchUploadedImages.map((img, i) => async () => {
+            const tagContainer = document.getElementById(`batchTags_${i}`).parentElement;
+            
+            try {
+                // 调用 AI 生成标签 API
+                const response = await fetch(`${API_BASE}/images/${img.image_id}/tags/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt || undefined,
+                        delimiter: delimiter,
+                        mode: 'append'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.code === 200) {
+                    // 成功：更新标签列表
+                    const generatedTags = data.data.generated_tags || [];
+                    
+                    // 合并到 batchTags
+                    if (!img.batchTags) {
+                        img.batchTags = [];
+                    }
+                    generatedTags.forEach(tag => {
+                        if (!img.batchTags.includes(tag)) {
+                            img.batchTags.push(tag);
+                        }
+                    });
+                    
+                    // 更新显示
+                    renderBatchTags(i);
+                    
+                    // 显示成功状态
+                    const statusDiv = document.createElement('div');
+                    statusDiv.className = 'ai-status success';
+                    statusDiv.textContent = `✓ 已生成 ${generatedTags.length} 个标签`;
+                    tagContainer.appendChild(statusDiv);
+                    
+                    return { success: true };
+                } else {
+                    throw new Error(data.message || '生成失败');
+                }
+            } catch (error) {
+                // 失败：显示错误
+                const statusDiv = document.createElement('div');
+                statusDiv.className = 'ai-status error';
+                statusDiv.textContent = `✗ ${error.message}`;
+                tagContainer.appendChild(statusDiv);
+                
+                throw error;
+            } finally {
+                // 移除加载状态
+                tagContainer.classList.remove('ai-loading');
+            }
+        });
+        
+        // 并发执行任务
+        const results = await runWithConcurrency(tasks, concurrency);
+        
+        // 统计结果
+        results.forEach(result => {
+            if (result.success) {
+                successCount++;
+            } else {
+                failCount++;
+            }
+        });
+        
+        // 显示总结
+        if (failCount === 0) {
+            alert(`✅ 全部生成成功！共为 ${successCount} 张图片生成了标签`);
+        } else {
+            alert(`⚠️ 生成完成\n成功: ${successCount} 张\n失败: ${failCount} 张`);
+        }
+    } catch (error) {
+        alert(`批量生成失败: ${error.message}`);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '✨ 自动生成标签';
     }
 }
 
