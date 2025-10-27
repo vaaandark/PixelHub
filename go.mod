@@ -7,6 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/sashabaranov/go-openai v1.41.2
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.49
 )
 

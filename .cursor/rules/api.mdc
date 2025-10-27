@@ -242,7 +242,108 @@ alwaysApply: false
 | `tags` | Body | String Array | 新的标签列表。 | 是 |
 | `mode` | Body | String | **'set'** (替换所有标签) 或 **'append'** (追加新标签)。 | 否 (默认'set') |
 
-#### 9\. 列出所有标签
+#### 9\. AI 生成图片标签
+
+| 方法 | 路径 | 描述 |
+| :--- | :--- | :--- |
+| `POST` | `/images/{image_id}/tags/generate` | 使用多模态大语言模型自动为图片生成标签。 |
+
+| 参数 | 位置 | 类型 | 描述 | 必填 |
+| :--- | :--- | :--- | :--- | :--- |
+| `image_id` | Path | String | 图片 ID。 | 是 |
+| `prompt` | Body | String | 提示词，引导 LLM 生成标签（可在提示词中控制数量、语言、风格等）。 | 否 |
+| `delimiter` | Body | String | 标签分隔符（与 prompt 配合使用）。 | 否 (默认 ',') |
+| `mode` | Body | String | **'append'** (追加标签) 或 **'replace'** (替换所有标签)。 | 否 (默认 'append') |
+
+**说明**：
+- 调用多模态大语言模型（如 Doubao Seed）分析图片内容
+- 根据图片内容和提示词自动生成相关标签
+- `prompt` 为空时使用默认提示词
+- 标签数量、语言、风格完全由 `prompt` 控制，更加灵活
+- `delimiter` 用于解析 LLM 返回的文本，提取标签列表
+- `mode` 控制是追加到现有标签还是替换所有标签
+
+**默认提示词**：
+```
+请分析这张图片，生成 5-10 个中文描述性标签，用逗号分隔。
+标签应准确、简洁，涵盖：主题、场景、风格、色彩、情感等方面。
+请只返回标签列表，不要包含其他内容。
+```
+
+**请求示例 1（使用默认提示词）**：
+```json
+{
+  "mode": "append"
+}
+```
+
+**请求示例 2（自定义中文标签）**：
+```json
+{
+  "prompt": "请用 8 个中文词语描述这张图片的主题、色调和氛围，用逗号分隔",
+  "delimiter": ",",
+  "mode": "replace"
+}
+```
+
+**请求示例 3（生成英文标签）**：
+```json
+{
+  "prompt": "Generate 10 English tags for this image, separated by semicolons. Focus on subject, style, and mood.",
+  "delimiter": ";",
+  "mode": "append"
+}
+```
+
+**请求示例 4（技术参数风格）**：
+```json
+{
+  "prompt": "分析这张照片的拍摄参数和技术特点，生成 5 个专业摄影标签，用逗号分隔",
+  "delimiter": ",",
+  "mode": "append"
+}
+```
+
+**成功响应 (200 OK):**
+
+```json
+{
+  "code": 200,
+  "message": "Tags generated successfully",
+  "data": {
+    "generated_tags": ["风景", "山川", "日落", "自然", "宁静", "橙色", "户外"],
+    "mode": "append",
+    "tags_before": ["旅行", "摄影"],
+    "tags_after": ["旅行", "摄影", "风景", "山川", "日落", "自然", "宁静", "橙色", "户外"]
+  }
+}
+```
+
+**响应字段说明**：
+- `generated_tags`: AI 生成的新标签列表
+- `mode`: 使用的模式（append 或 replace）
+- `tags_before`: 操作前的标签列表
+- `tags_after`: 操作后的标签列表
+
+**错误响应示例**：
+
+```json
+{
+  "code": 503,
+  "message": "LLM service unavailable: connection timeout"
+}
+```
+
+**使用场景**：
+1. **快速标注**：使用默认提示词一键生成中文标签
+2. **定制化标注**：自定义 prompt 生成特定风格的标签
+3. **多语言标签**：在 prompt 中指定语言（中文、英文、日文等）
+4. **专业领域标签**：通过 prompt 引导生成专业领域的标签（摄影、艺术、技术等）
+5. **批量更新**：使用 `replace` 模式完全替换旧标签
+
+---
+
+#### 10\. 列出所有标签
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -271,7 +372,7 @@ alwaysApply: false
 }
 ```
 
-#### 10\. 精确搜索（AND 逻辑）
+#### 11\. 精确搜索（AND 逻辑）
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -303,7 +404,7 @@ alwaysApply: false
 }
 ```
 
-#### 11\. 相关性搜索（OR 逻辑）
+#### 12\. 相关性搜索（OR 逻辑）
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |

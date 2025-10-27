@@ -8,6 +8,7 @@ type Config struct {
 	Server   ServerConfig   `toml:"server"`
 	Database DatabaseConfig `toml:"database"`
 	Storage  StorageConfig  `toml:"storage"`
+	LLM      LLMConfig      `toml:"llm"`
 }
 
 type ServerConfig struct {
@@ -29,6 +30,16 @@ type TencentCOSConfig struct {
 	SecretKey string `toml:"secret_key"`
 	BucketURL string `toml:"bucket_url"`
 	CDNURL    string `toml:"cdn_url"`
+}
+
+type LLMConfig struct {
+	Provider         string `toml:"provider"`
+	APIKey           string `toml:"api_key"`
+	BaseURL          string `toml:"base_url"`
+	Model            string `toml:"model"`
+	Timeout          int    `toml:"timeout"`
+	DefaultPrompt    string `toml:"default_prompt"`
+	DefaultDelimiter string `toml:"default_delimiter"`
 }
 
 func LoadConfig(path string) (*Config, error) {

@@ -15,18 +15,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/vaaandark/PixelHub/internal/database"
+	"github.com/vaaandark/PixelHub/internal/llm"
 	"github.com/vaaandark/PixelHub/internal/storage"
 )
 
 type Handler struct {
-	db      *sql.DB
-	storage storage.Provider
+	db           *sql.DB
+	storage      storage.Provider
+	tagGenerator llm.TagGenerator
 }
 
-func NewHandler(db *sql.DB, storageProvider storage.Provider) *Handler {
+func NewHandler(db *sql.DB, storageProvider storage.Provider, tagGenerator llm.TagGenerator) *Handler {
 	return &Handler{
-		db:      db,
-		storage: storageProvider,
+		db:           db,
+		storage:      storageProvider,
+		tagGenerator: tagGenerator,
 	}
 }
 
@@ -459,6 +462,109 @@ func (h *Handler) UpdateImageTags(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		Code:    200,
 		Message: "Tags updated successfully",
+	})
+}
+
+// GenerateImageTags AI 生成图片标签
+func (h *Handler) GenerateImageTags(c *gin.Context) {
+	imageID := c.Param("image_id")
+
+	var req struct {
+		Prompt    string `json:"prompt"`
+		Delimiter string `json:"delimiter"`
+		Mode      string `json:"mode"` // "append" or "replace"
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Code:    400,
+			Message: "Invalid request",
+		})
+		return
+	}
+
+	// 检查 LLM 是否配置
+	if h.tagGenerator == nil {
+		c.JSON(http.StatusServiceUnavailable, Response{
+			Code:    503,
+			Message: "LLM service not configured",
+		})
+		return
+	}
+
+	// 检查图片是否存在
+	pic, err := database.GetPicture(h.db, imageID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, Response{
+				Code:    404,
+				Message: "Image not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, Response{
+			Code:    500,
+			Message: "Failed to get image",
+		})
+		return
+	}
+
+	// 获取当前标签
+	tagsBefore, err := database.GetPictureTags(h.db, imageID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Code:    500,
+			Message: "Failed to get current tags",
+		})
+		return
+	}
+
+	// 调用 LLM 生成标签
+	ctx := c.Request.Context()
+	generatedTags, err := h.tagGenerator.GenerateTags(ctx, pic.URL, req.Prompt, req.Delimiter)
+	if err != nil {
+		c.JSON(http.StatusServiceUnavailable, Response{
+			Code:    503,
+			Message: fmt.Sprintf("LLM service error: %v", err),
+		})
+		return
+	}
+
+	// 根据 mode 处理标签
+	mode := req.Mode
+	if mode == "" {
+		mode = "append"
+	}
+
+	var finalTags []string
+	if mode == "replace" {
+		// 替换模式：使用生成的标签
+		finalTags = generatedTags
+		err = database.SetPictureTags(h.db, imageID, generatedTags)
+	} else {
+		// 追加模式：合并标签
+		err = database.AppendPictureTags(h.db, imageID, generatedTags)
+		// 获取更新后的标签
+		finalTags, _ = database.GetPictureTags(h.db, imageID)
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Code:    500,
+			Message: fmt.Sprintf("Failed to update tags: %v", err),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Code:    200,
+		Message: "Tags generated successfully",
+		Data: map[string]interface{}{
+			"generated_tags": generatedTags,
+			"mode":           mode,
+			"tags_before":    tagsBefore,
+			"tags_after":     finalTags,
+		},
 	})
 }
 

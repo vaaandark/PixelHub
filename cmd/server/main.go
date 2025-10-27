@@ -6,6 +6,7 @@ import (
 	"github.com/vaaandark/PixelHub/internal/config"
 	"github.com/vaaandark/PixelHub/internal/database"
 	"github.com/vaaandark/PixelHub/internal/handlers"
+	"github.com/vaaandark/PixelHub/internal/llm"
 	"github.com/vaaandark/PixelHub/internal/storage"
 
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,20 @@ func main() {
 		log.Fatalf("Failed to initialize storage provider: %v", err)
 	}
 
+	// 初始化 LLM 标签生成器（可选）
+	var tagGenerator llm.TagGenerator
+	if cfg.LLM.Provider != "" && cfg.LLM.APIKey != "" {
+		tagGenerator, err = llm.NewDoubaoGenerator(&cfg.LLM)
+		if err != nil {
+			log.Printf("Warning: Failed to initialize LLM generator: %v", err)
+			log.Printf("AI tag generation will be unavailable")
+		} else {
+			log.Printf("LLM generator initialized: %s", cfg.LLM.Provider)
+		}
+	} else {
+		log.Printf("LLM not configured, AI tag generation will be unavailable")
+	}
+
 	// 创建 Gin 路由器
 	r := gin.Default()
 
@@ -51,7 +66,7 @@ func main() {
 	r.StaticFile("/", "./web/index.html")
 
 	// 初始化处理器
-	h := handlers.NewHandler(db, storageProvider)
+	h := handlers.NewHandler(db, storageProvider, tagGenerator)
 
 	// 图床后端 API 路由
 	api := r.Group("/api/v1")
@@ -67,6 +82,7 @@ func main() {
 
 		// 标签管理
 		api.PUT("/images/:image_id/tags", h.UpdateImageTags)
+		api.POST("/images/:image_id/tags/generate", h.GenerateImageTags)
 		api.GET("/tags", h.ListTags)
 
 		// 搜索
