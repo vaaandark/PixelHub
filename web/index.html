@@ -18,7 +18,7 @@
             <section class="upload-section card">
                 <h2>📤 上传图片</h2>
                 <div class="upload-area" id="uploadArea">
-                    <input type="file" id="fileInput" accept="image/*" hidden>
+                    <input type="file" id="fileInput" accept="image/*" multiple hidden>
                     <div class="upload-placeholder">
                         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -26,11 +26,11 @@
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
                         <p>点击或拖拽图片到此处上传</p>
-                        <p class="hint">支持 JPG、PNG、GIF 等格式</p>
+                        <p class="hint">支持 JPG、PNG、GIF 等格式，可多选</p>
                     </div>
                 </div>
                 <div class="upload-description">
-                    <input type="text" id="uploadDescription" placeholder="添加图片描述（可选）">
+                    <input type="text" id="uploadDescription" placeholder="添加图片描述（仅单图上传时有效）">
                 </div>
                 <div id="uploadResult" class="upload-result hidden"></div>
             </section>
@@ -117,6 +117,21 @@
                         <button id="deleteImageBtn" class="btn btn-danger">删除图片</button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量编辑模态框 -->
+    <div id="batchEditModal" class="modal hidden">
+        <div class="modal-content modal-large">
+            <span class="modal-close" onclick="closeBatchEdit()">&times;</span>
+            <div class="modal-body">
+                <h3>批量编辑图片</h3>
+                <div class="batch-edit-header">
+                    <p>已上传 <strong id="batchTotalCount">0</strong> 张图片，为每张图片添加描述和标签</p>
+                    <button id="batchSaveAllBtn" class="btn btn-primary">保存全部</button>
+                </div>
+                <div id="batchEditList" class="batch-edit-list"></div>
             </div>
         </div>
     </div>

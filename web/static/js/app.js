@@ -8,6 +8,7 @@ let galleryPage = 1;
 let gallerySort = 'date_desc';
 let totalImages = 0;
 let currentTags = []; // 当前编辑的标签列表
+let batchUploadedImages = []; // 批量上传的图片列表
 
 // DOM 元素
 const uploadArea = document.getElementById('uploadArea');
@@ -46,21 +47,31 @@ function initUpload() {
     uploadArea.addEventListener('drop', (e) => {
         e.preventDefault();
         uploadArea.classList.remove('dragging');
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) {
-            uploadFile(file);
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+        if (files.length > 0) {
+            handleFiles(files);
         }
     });
     
     fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            uploadFile(file);
+        const files = Array.from(e.target.files);
+        if (files.length > 0) {
+            handleFiles(files);
         }
     });
 }
 
-async function uploadFile(file) {
+// 处理文件上传（单个或多个）
+function handleFiles(files) {
+    if (files.length === 1) {
+        uploadSingleFile(files[0]);
+    } else {
+        uploadMultipleFiles(files);
+    }
+}
+
+// 单文件上传
+async function uploadSingleFile(file) {
     const formData = new FormData();
     formData.append('file', file);
     
@@ -87,7 +98,7 @@ async function uploadFile(file) {
                 <p><strong>图片 ID:</strong> ${data.data.image_id}</p>
                 <p><strong>URL:</strong> <a href="${data.data.url}" target="_blank">${data.data.url}</a></p>
                 ${data.data.description ? `<p><strong>描述:</strong> ${data.data.description}</p>` : ''}
-                <button onclick="showImageDetail('${data.data.image_id}')" class="btn btn-secondary" style="margin-top: 0.5rem;">添加标签</button>
+                <button onclick="showImageDetail('${data.data.image_id}')" class="btn btn-secondary" style="margin-top: 0.5rem;">修改描述或添加标签</button>
             `;
             fileInput.value = '';
             document.getElementById('uploadDescription').value = '';
@@ -99,6 +110,48 @@ async function uploadFile(file) {
     } catch (error) {
         uploadResult.classList.add('error');
         uploadResult.textContent = `上传失败: ${error.message}`;
+    }
+}
+
+// 批量上传
+async function uploadMultipleFiles(files) {
+    const formData = new FormData();
+    files.forEach(file => {
+        formData.append('files', file);
+    });
+    
+    try {
+        uploadResult.classList.remove('hidden', 'error');
+        uploadResult.textContent = `正在上传 ${files.length} 张图片...`;
+        
+        const response = await fetch(`${API_BASE}/images/batch-upload`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.code === 200) {
+            const { total, success, failed, results } = data.data;
+            
+            uploadResult.innerHTML = `
+                <p>✅ 批量上传完成！</p>
+                <p>总计: ${total} 张，成功: ${success} 张，失败: ${failed} 张</p>
+                ${failed > 0 ? `<p class="error">失败的文件：${results.filter(r => r.status === 'failed').map(r => r.filename).join(', ')}</p>` : ''}
+                <button onclick="showBatchEdit(${JSON.stringify(results.filter(r => r.status === 'success')).replace(/"/g, '&quot;')})" class="btn btn-primary" style="margin-top: 0.5rem;">修改描述或添加标签</button>
+            `;
+            
+            fileInput.value = '';
+            document.getElementById('uploadDescription').value = '';
+            
+            // 刷新图片列表
+            loadGallery();
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        uploadResult.classList.add('error');
+        uploadResult.textContent = `批量上传失败: ${error.message}`;
     }
 }
 
@@ -492,6 +545,197 @@ async function deleteImage() {
         }
     } catch (error) {
         alert(`删除失败: ${error.message}`);
+    }
+}
+
+// ========== 批量编辑功能 ==========
+
+// 显示批量编辑模态框
+function showBatchEdit(images) {
+    batchUploadedImages = images;
+    
+    const batchEditModal = document.getElementById('batchEditModal');
+    const batchTotalCount = document.getElementById('batchTotalCount');
+    const batchEditList = document.getElementById('batchEditList');
+    
+    batchTotalCount.textContent = images.length;
+    
+    // 渲染批量编辑列表
+    batchEditList.innerHTML = images.map((img, index) => `
+        <div class="batch-edit-item" data-index="${index}">
+            <div class="batch-edit-preview">
+                <img src="${img.url}" alt="${img.filename}">
+                <p class="batch-edit-filename">${escapeHtml(img.filename)}</p>
+            </div>
+            <div class="batch-edit-description">
+                <label>描述</label>
+                <input type="text" 
+                       class="batch-description-input" 
+                       data-image-id="${img.image_id}" 
+                       placeholder="输入图片描述">
+            </div>
+            <div class="batch-edit-tags">
+                <label>标签</label>
+                <div class="batch-tags-input-group">
+                    <input type="text" 
+                           class="batch-tags-input" 
+                           data-index="${index}"
+                           placeholder="添加标签（逗号分隔）">
+                    <button class="btn btn-icon btn-sm" onclick="addBatchTags(${index})" title="添加">➕</button>
+                </div>
+                <div class="batch-tags-display" id="batchTags_${index}"></div>
+            </div>
+        </div>
+    `).join('');
+    
+    // 初始化每个图片的标签数组
+    images.forEach((img, index) => {
+        img.batchTags = [];
+    });
+    
+    batchEditModal.classList.remove('hidden');
+    
+    // 绑定保存按钮
+    document.getElementById('batchSaveAllBtn').onclick = saveBatchEdits;
+}
+
+// 关闭批量编辑模态框
+function closeBatchEdit() {
+    document.getElementById('batchEditModal').classList.add('hidden');
+    batchUploadedImages = [];
+}
+
+// 为单个图片添加标签
+function addBatchTags(index) {
+    const input = document.querySelector(`.batch-tags-input[data-index="${index}"]`);
+    const value = input.value.trim();
+    
+    if (!value) {
+        return;
+    }
+    
+    // 解析标签
+    const newTags = value.split(/[,;，；\s]+/)
+        .map(t => t.trim())
+        .filter(t => t);
+    
+    if (newTags.length === 0) {
+        return;
+    }
+    
+    // 添加到图片的标签数组
+    const img = batchUploadedImages[index];
+    if (!img.batchTags) {
+        img.batchTags = [];
+    }
+    
+    newTags.forEach(tag => {
+        if (!img.batchTags.includes(tag)) {
+            img.batchTags.push(tag);
+        }
+    });
+    
+    // 更新显示
+    renderBatchTags(index);
+    input.value = '';
+}
+
+// 渲染批量标签
+function renderBatchTags(index) {
+    const container = document.getElementById(`batchTags_${index}`);
+    const img = batchUploadedImages[index];
+    
+    if (!img.batchTags || img.batchTags.length === 0) {
+        container.innerHTML = '<span class="batch-tags-empty">暂无标签</span>';
+        return;
+    }
+    
+    container.innerHTML = img.batchTags.map((tag, tagIndex) => `
+        <div class="editable-tag">
+            <span>${escapeHtml(tag)}</span>
+            <span class="tag-remove" onclick="removeBatchTag(${index}, ${tagIndex})">✕</span>
+        </div>
+    `).join('');
+}
+
+// 删除批量标签
+function removeBatchTag(imageIndex, tagIndex) {
+    const img = batchUploadedImages[imageIndex];
+    if (img.batchTags) {
+        img.batchTags.splice(tagIndex, 1);
+        renderBatchTags(imageIndex);
+    }
+}
+
+// 保存所有批量编辑
+async function saveBatchEdits() {
+    const saveBtn = document.getElementById('batchSaveAllBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = '保存中...';
+    
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+    
+    try {
+        // 获取所有描述输入
+        const descriptionInputs = document.querySelectorAll('.batch-description-input');
+        
+        // 逐个保存图片信息
+        for (let i = 0; i < batchUploadedImages.length; i++) {
+            const img = batchUploadedImages[i];
+            const descInput = descriptionInputs[i];
+            const description = descInput.value.trim();
+            const tags = img.batchTags || [];
+            
+            try {
+                // 如果有描述，更新描述
+                if (description) {
+                    const descResponse = await fetch(`${API_BASE}/images/${img.image_id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ description })
+                    });
+                    
+                    if (!descResponse.ok) {
+                        throw new Error('描述更新失败');
+                    }
+                }
+                
+                // 如果有标签，更新标签
+                if (tags.length > 0) {
+                    const tagsResponse = await fetch(`${API_BASE}/images/${img.image_id}/tags`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tags, mode: 'set' })
+                    });
+                    
+                    if (!tagsResponse.ok) {
+                        throw new Error('标签更新失败');
+                    }
+                }
+                
+                successCount++;
+            } catch (error) {
+                errorCount++;
+                errors.push(`${img.filename}: ${error.message}`);
+            }
+        }
+        
+        // 显示结果
+        if (errorCount === 0) {
+            alert(`✅ 全部保存成功！共 ${successCount} 张图片`);
+            closeBatchEdit();
+            loadTags();
+            loadGallery();
+        } else {
+            alert(`⚠️ 保存完成\n成功: ${successCount} 张\n失败: ${errorCount} 张\n\n失败详情:\n${errors.join('\n')}`);
+        }
+    } catch (error) {
+        alert(`保存失败: ${error.message}`);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '保存全部';
     }
 }
 

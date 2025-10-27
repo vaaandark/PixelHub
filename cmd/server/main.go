@@ -58,6 +58,7 @@ func main() {
 	{
 		// 图片管理
 		api.POST("/images/upload", h.UploadImage)
+		api.POST("/images/batch-upload", h.BatchUploadImages)
 		api.GET("/images", h.ListImages)
 		api.GET("/images/:image_id", h.GetImageDetail)
 		api.PUT("/images/:image_id", h.UpdateImageDescription)

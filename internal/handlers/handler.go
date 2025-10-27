@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -36,28 +37,12 @@ type Response struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
-// UploadImage 上传图片
-func (h *Handler) UploadImage(c *gin.Context) {
-	file, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, Response{
-			Code:    400,
-			Message: "No file uploaded",
-		})
-		return
-	}
-
-	// 获取可选的描述信息
-	description := c.PostForm("description")
-
+// uploadSingleImage 上传单个图片的核心逻辑（辅助函数）
+func (h *Handler) uploadSingleImage(file *multipart.FileHeader, description string) (map[string]interface{}, error) {
 	// 打开文件
 	src, err := file.Open()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Code:    500,
-			Message: "Failed to open file",
-		})
-		return
+		return nil, fmt.Errorf("failed to open file: %v", err)
 	}
 	defer src.Close()
 
@@ -65,11 +50,7 @@ func (h *Handler) UploadImage(c *gin.Context) {
 	hasher := sha256.New()
 	fileContent, err := io.ReadAll(src)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Code:    500,
-			Message: "Failed to read file",
-		})
-		return
+		return nil, fmt.Errorf("failed to read file: %v", err)
 	}
 	hasher.Write(fileContent)
 	hash := hex.EncodeToString(hasher.Sum(nil))
@@ -91,11 +72,7 @@ func (h *Handler) UploadImage(c *gin.Context) {
 	reader := strings.NewReader(string(fileContent))
 	storageKey, url, err := h.storage.Upload(storageKey, reader, contentType)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Code:    500,
-			Message: fmt.Sprintf("Failed to upload: %v", err),
-		})
-		return
+		return nil, fmt.Errorf("failed to upload to storage: %v", err)
 	}
 
 	// 保存到数据库
@@ -110,9 +87,36 @@ func (h *Handler) UploadImage(c *gin.Context) {
 	if err := database.CreatePicture(h.db, pic); err != nil {
 		// 如果数据库保存失败，尝试删除已上传的文件
 		h.storage.Delete(storageKey)
+		return nil, fmt.Errorf("failed to save to database: %v", err)
+	}
+
+	return map[string]interface{}{
+		"image_id":    imageID,
+		"url":         url,
+		"hash":        hash,
+		"description": description,
+	}, nil
+}
+
+// UploadImage 上传图片
+func (h *Handler) UploadImage(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Code:    400,
+			Message: "No file uploaded",
+		})
+		return
+	}
+
+	// 获取可选的描述信息
+	description := c.PostForm("description")
+
+	result, err := h.uploadSingleImage(file, description)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Code:    500,
-			Message: "Failed to save to database",
+			Message: err.Error(),
 		})
 		return
 	}
@@ -120,11 +124,77 @@ func (h *Handler) UploadImage(c *gin.Context) {
 	c.JSON(http.StatusCreated, Response{
 		Code:    201,
 		Message: "Upload successful",
+		Data:    result,
+	})
+}
+
+// BatchUploadImages 批量上传图片
+func (h *Handler) BatchUploadImages(c *gin.Context) {
+	// 获取 multipart form
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Code:    400,
+			Message: "Failed to parse multipart form",
+		})
+		return
+	}
+
+	// 获取所有文件
+	files := form.File["files"]
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, Response{
+			Code:    400,
+			Message: "No files uploaded",
+		})
+		return
+	}
+
+	// 批量上传结果
+	type UploadResult struct {
+		Filename string `json:"filename"`
+		Status   string `json:"status"`
+		ImageID  string `json:"image_id,omitempty"`
+		URL      string `json:"url,omitempty"`
+		Hash     string `json:"hash,omitempty"`
+		Error    string `json:"error,omitempty"`
+	}
+
+	results := make([]UploadResult, 0, len(files))
+	successCount := 0
+	failedCount := 0
+
+	// 逐个处理文件
+	for _, file := range files {
+		result := UploadResult{
+			Filename: file.Filename,
+		}
+
+		// 上传文件（不带 description）
+		data, err := h.uploadSingleImage(file, "")
+		if err != nil {
+			result.Status = "failed"
+			result.Error = err.Error()
+			failedCount++
+		} else {
+			result.Status = "success"
+			result.ImageID = data["image_id"].(string)
+			result.URL = data["url"].(string)
+			result.Hash = data["hash"].(string)
+			successCount++
+		}
+
+		results = append(results, result)
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Code:    200,
+		Message: "Batch upload completed",
 		Data: map[string]interface{}{
-			"image_id":    imageID,
-			"url":         url,
-			"hash":        hash,
-			"description": description,
+			"total":   len(files),
+			"success": successCount,
+			"failed":  failedCount,
+			"results": results,
 		},
 	})
 }

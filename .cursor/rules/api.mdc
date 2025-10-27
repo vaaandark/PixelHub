@@ -37,7 +37,57 @@ alwaysApply: false
 }
 ```
 
-#### 2\. 列出所有图片
+#### 2\. 批量上传图片
+
+| 方法 | 路径 | 描述 |
+| :--- | :--- | :--- |
+| `POST` | `/images/batch-upload` | 批量上传多个图片文件，返回每个文件的上传结果。 |
+
+| 参数 | 位置 | 类型 | 描述 | 必填 |
+| :--- | :--- | :--- | :--- | :--- |
+| `files` | Body (FormData) | File[] | 要上传的图片文件数组。 | 是 |
+
+**说明**：
+- 批量上传不支持添加 tag 和 description，这些信息可以在上传后通过其他接口修改
+- 每个文件独立处理，部分失败不影响其他文件
+- 建议单次批量上传不超过 20 个文件
+
+**成功响应 (200 OK):**
+
+```json
+{
+  "code": 200,
+  "message": "Batch upload completed",
+  "data": {
+    "total": 5,
+    "success": 4,
+    "failed": 1,
+    "results": [
+      {
+        "filename": "photo1.jpg",
+        "status": "success",
+        "image_id": "img_a1b2c3d4",
+        "url": "https://cdn.your-imagehost.com/a1b2c3d4.jpg",
+        "hash": "e6884675b87..."
+      },
+      {
+        "filename": "photo2.jpg",
+        "status": "success",
+        "image_id": "img_b2c3d4e5",
+        "url": "https://cdn.your-imagehost.com/b2c3d4e5.jpg",
+        "hash": "f7995786c98..."
+      },
+      {
+        "filename": "invalid.txt",
+        "status": "failed",
+        "error": "Invalid file type"
+      }
+    ]
+  }
+}
+```
+
+#### 3\. 列出所有图片
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -71,7 +121,7 @@ alwaysApply: false
 }
 ```
 
-#### 3\. 获取图片详情
+#### 4\. 获取图片详情
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -94,7 +144,7 @@ alwaysApply: false
 }
 ```
 
-#### 4\. 更新图片描述
+#### 5\. 更新图片描述
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -113,7 +163,7 @@ alwaysApply: false
 }
 ```
 
-#### 5\. 删除图片
+#### 6\. 删除图片
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -130,7 +180,7 @@ alwaysApply: false
 
 ### B. 标签管理与查询 (Tag Management & Query)
 
-#### 6\. 给图片打标签
+#### 7\. 给图片打标签
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -141,7 +191,7 @@ alwaysApply: false
 | `tags` | Body | String Array | 新的标签列表。 | 是 |
 | `mode` | Body | String | **'set'** (替换所有标签) 或 **'append'** (追加新标签)。 | 否 (默认'set') |
 
-#### 7\. 列出所有标签
+#### 8\. 列出所有标签
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -170,7 +220,7 @@ alwaysApply: false
 }
 ```
 
-#### 8\. 精确搜索（AND 逻辑）
+#### 9\. 精确搜索（AND 逻辑）
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |
@@ -202,7 +252,7 @@ alwaysApply: false
 }
 ```
 
-#### 9\. 相关性搜索（OR 逻辑）
+#### 10\. 相关性搜索（OR 逻辑）
 
 | 方法 | 路径 | 描述 |
 | :--- | :--- | :--- |

@@ -55,7 +55,94 @@ curl -X POST http://localhost:8080/api/v1/images/upload \
 
 ---
 
-### 2. 列出所有图片
+### 2. 批量上传图片
+
+批量上传多个图片文件到服务器。批量上传不支持添加 tag 和 description，这些信息可以在上传后通过其他接口修改。
+
+**请求**
+```http
+POST /api/v1/images/batch-upload
+Content-Type: multipart/form-data
+```
+
+**参数**
+- `files` (required): 图片文件数组，建议单次不超过 20 个文件
+
+**说明**
+- 每个文件独立处理，部分失败不影响其他文件
+- 返回每个文件的上传结果（成功或失败）
+- 批量上传的图片默认没有 description 和 tags
+
+**响应**
+```json
+{
+  "code": 200,
+  "message": "Batch upload completed",
+  "data": {
+    "total": 5,
+    "success": 4,
+    "failed": 1,
+    "results": [
+      {
+        "filename": "photo1.jpg",
+        "status": "success",
+        "image_id": "img_a1b2c3d4",
+        "url": "https://cdn.your-imagehost.com/a1b2c3d4.jpg",
+        "hash": "e6884675b87..."
+      },
+      {
+        "filename": "photo2.jpg",
+        "status": "success",
+        "image_id": "img_b2c3d4e5",
+        "url": "https://cdn.your-imagehost.com/b2c3d4e5.jpg",
+        "hash": "f7995786c98..."
+      },
+      {
+        "filename": "photo3.jpg",
+        "status": "success",
+        "image_id": "img_c3d4e5f6",
+        "url": "https://cdn.your-imagehost.com/c3d4e5f6.jpg",
+        "hash": "g8aa6897d09..."
+      },
+      {
+        "filename": "photo4.jpg",
+        "status": "success",
+        "image_id": "img_d4e5f6g7",
+        "url": "https://cdn.your-imagehost.com/d4e5f6g7.jpg",
+        "hash": "h9bb7908e10..."
+      },
+      {
+        "filename": "invalid.txt",
+        "status": "failed",
+        "error": "failed to upload to storage: invalid file type"
+      }
+    ]
+  }
+}
+```
+
+**cURL 示例**
+```bash
+# 批量上传多个图片
+curl -X POST http://localhost:8080/api/v1/images/batch-upload \
+  -F "files=@/path/to/photo1.jpg" \
+  -F "files=@/path/to/photo2.jpg" \
+  -F "files=@/path/to/photo3.jpg"
+```
+
+**使用场景**
+- 一次性导入大量图片
+- 从其他平台迁移图片
+- 批量备份照片库
+
+**注意事项**
+- 如果需要为图片添加描述或标签，请在批量上传后使用以下接口：
+  - `PUT /api/v1/images/{image_id}` - 更新描述
+  - `PUT /api/v1/images/{image_id}/tags` - 添加标签
+
+---
+
+### 3. 列出所有图片
 
 获取所有图片列表，支持分页和排序。
 
@@ -113,7 +200,7 @@ curl "http://localhost:8080/api/v1/images?sort=date_asc"
 
 ---
 
-### 3. 获取图片详情
+### 4. 获取图片详情
 
 获取指定图片的完整信息，包括 URL、描述、标签等元数据。
 
@@ -145,7 +232,7 @@ curl http://localhost:8080/api/v1/images/img_a1b2c3d4
 
 ---
 
-### 4. 更新图片描述
+### 5. 更新图片描述
 
 更新指定图片的描述信息。
 
@@ -181,7 +268,7 @@ curl -X PUT http://localhost:8080/api/v1/images/img_a1b2c3d4 \
 
 ---
 
-### 5. 更新图片标签
+### 6. 更新图片标签
 
 为图片添加或更新标签。
 
@@ -227,7 +314,7 @@ curl -X PUT http://localhost:8080/api/v1/images/img_a1b2c3d4/tags \
 
 ---
 
-### 6. 删除图片
+### 7. 删除图片
 
 删除指定图片（软删除）。
 
@@ -251,7 +338,7 @@ curl -X DELETE http://localhost:8080/api/v1/images/img_a1b2c3d4
 
 ---
 
-### 7. 列出所有标签
+### 8. 列出所有标签
 
 获取系统中所有标签的列表（按使用次数排序）。
 
@@ -288,7 +375,7 @@ curl "http://localhost:8080/api/v1/tags?page=1&limit=50"
 
 ---
 
-### 8. 精确搜索图片
+### 9. 精确搜索图片
 
 使用 AND 逻辑搜索包含所有指定标签的图片。
 
@@ -331,7 +418,7 @@ curl "http://localhost:8080/api/v1/search/exact?tags=风景,自然&page=1&limit=
 
 ---
 
-### 9. 相关性搜索图片
+### 10. 相关性搜索图片
 
 使用 OR 逻辑搜索，返回包含任一标签的图片，按匹配标签数降序排列。
 
