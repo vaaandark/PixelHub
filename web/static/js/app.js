@@ -496,8 +496,8 @@ function addNewTags() {
         return;
     }
     
-    // 支持多种分隔符：逗号、分号、空格
-    const newTags = value.split(/[,;，；\s]+/)
+    // 支持多种分隔符：逗号、分号（标签内容可以包含空格）
+    const newTags = value.split(/[,;，；]+/)
         .map(t => t.trim())
         .filter(t => t && !currentTags.includes(t)); // 去重
     
@@ -642,8 +642,8 @@ function addBatchTags(index) {
         return;
     }
     
-    // 解析标签
-    const newTags = value.split(/[,;，；\s]+/)
+    // 解析标签（标签内容可以包含空格）
+    const newTags = value.split(/[,;，；]+/)
         .map(t => t.trim())
         .filter(t => t);
     
