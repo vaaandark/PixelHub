@@ -11,6 +11,7 @@ let currentTags = []; // 当前编辑的标签列表
 let batchUploadedImages = []; // 批量上传的图片列表
 let batchDeleteMode = false; // 批量删除模式
 let selectedImages = new Set(); // 选中的图片 ID 集合
+let allImageIds = []; // 所有图片的 ID 列表（用于全选）
 
 // DOM 元素
 const uploadArea = document.getElementById('uploadArea');
@@ -237,6 +238,7 @@ function initGallery() {
     
     // 批量删除按钮
     document.getElementById('batchDeleteBtn').addEventListener('click', enterBatchDeleteMode);
+    document.getElementById('selectAllImagesBtn').addEventListener('click', toggleSelectAllImages);
     document.getElementById('cancelBatchDeleteBtn').addEventListener('click', exitBatchDeleteMode);
     document.getElementById('confirmDeleteBtn').addEventListener('click', confirmBatchDelete);
     
@@ -1001,6 +1003,13 @@ async function batchGenerateTags() {
 function enterBatchDeleteMode() {
     batchDeleteMode = true;
     selectedImages.clear();
+    allImageIds = []; // 重置全选缓存
+    
+    // 重置全选按钮文本
+    const selectAllBtn = document.getElementById('selectAllImagesBtn');
+    if (selectAllBtn) {
+        selectAllBtn.textContent = '全选';
+    }
     
     // 显示/隐藏相关按钮
     document.getElementById('batchDeleteBtn').classList.add('hidden');
@@ -1017,6 +1026,7 @@ function enterBatchDeleteMode() {
 function exitBatchDeleteMode() {
     batchDeleteMode = false;
     selectedImages.clear();
+    allImageIds = []; // 清空全选缓存
     
     // 显示/隐藏相关按钮
     document.getElementById('batchDeleteBtn').classList.remove('hidden');
@@ -1056,6 +1066,63 @@ function toggleImageSelection(imageId, checked) {
 // 更新选中计数显示
 function updateSelectedCount() {
     document.getElementById('selectedCount').textContent = selectedImages.size;
+    
+    // 更新全选按钮文本
+    const selectAllBtn = document.getElementById('selectAllImagesBtn');
+    if (selectAllBtn && allImageIds.length > 0) {
+        const allSelected = allImageIds.every(id => selectedImages.has(id));
+        selectAllBtn.textContent = allSelected ? '取消全选' : '全选';
+    }
+}
+
+// 全选/取消全选所有图片
+async function toggleSelectAllImages() {
+    const btn = document.getElementById('selectAllImagesBtn');
+    
+    // 如果还没有加载所有图片 ID，先加载
+    if (allImageIds.length === 0) {
+        btn.disabled = true;
+        btn.textContent = '加载中...';
+        
+        try {
+            // 获取所有图片（不分页）
+            const response = await fetch(`${API_BASE}/images?page=1&limit=10000`);
+            const data = await response.json();
+            
+            if (data.code === 200 && data.data.images) {
+                allImageIds = data.data.images.map(img => img.id);
+            } else {
+                alert('获取图片列表失败');
+                return;
+            }
+        } catch (error) {
+            alert(`加载失败: ${error.message}`);
+            return;
+        } finally {
+            btn.disabled = false;
+        }
+    }
+    
+    // 检查是否所有图片都已选中
+    const allSelected = allImageIds.every(id => selectedImages.has(id));
+    
+    if (allSelected) {
+        // 取消全选：清空所有选中
+        selectedImages.clear();
+    } else {
+        // 全选：添加所有图片
+        allImageIds.forEach(id => selectedImages.add(id));
+    }
+    
+    // 更新当前页的复选框状态
+    allImageIds.forEach(id => {
+        const checkbox = document.getElementById(`checkbox_${id}`);
+        if (checkbox) {
+            checkbox.checked = selectedImages.has(id);
+        }
+    });
+    
+    updateSelectedCount();
 }
 
 // 确认批量删除
