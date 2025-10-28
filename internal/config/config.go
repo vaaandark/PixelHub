@@ -33,13 +33,12 @@ type TencentCOSConfig struct {
 }
 
 type LLMConfig struct {
-	Provider         string `toml:"provider"`
-	APIKey           string `toml:"api_key"`
-	BaseURL          string `toml:"base_url"`
-	Model            string `toml:"model"`
-	Timeout          int    `toml:"timeout"`
-	DefaultPrompt    string `toml:"default_prompt"`
-	DefaultDelimiter string `toml:"default_delimiter"`
+	Provider      string `toml:"provider"`
+	APIKey        string `toml:"api_key"`
+	BaseURL       string `toml:"base_url"`
+	Model         string `toml:"model"`
+	Timeout       int    `toml:"timeout"`
+	DefaultPrompt string `toml:"default_prompt"`
 }
 
 func LoadConfig(path string) (*Config, error) {

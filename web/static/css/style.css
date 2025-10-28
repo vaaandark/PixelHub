@@ -969,13 +969,13 @@ body {
     gap: 1rem;
 }
 
-.batch-delete-actions {
+.batch-select-actions {
     display: flex;
     align-items: center;
     gap: 1rem;
 }
 
-.batch-delete-actions.hidden {
+.batch-select-actions.hidden {
     display: none;
 }
 
@@ -989,14 +989,14 @@ body {
     font-weight: 600;
 }
 
-/* 批量删除模式下的图片样式 */
-.result-item.batch-delete-mode {
+/* 批量选择模式下的图片样式 */
+.result-item.batch-select-mode {
     cursor: pointer;
     position: relative;
     transition: all 0.2s ease;
 }
 
-.result-item.batch-delete-mode:hover {
+.result-item.batch-select-mode:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     border-color: var(--primary-color);
@@ -1027,7 +1027,7 @@ body {
 }
 
 /* 未选中时悬浮效果 */
-.result-item.batch-delete-mode:hover .batch-checkbox:not(:checked) {
+.result-item.batch-select-mode:hover .batch-checkbox:not(:checked) {
     border-color: var(--primary-color);
     background: rgba(99, 102, 241, 0.2);
 }
@@ -1052,7 +1052,7 @@ body {
 }
 
 /* 选中状态的图片高亮 */
-.result-item.batch-delete-mode:has(.batch-checkbox:checked) {
+.result-item.batch-select-mode:has(.batch-checkbox:checked) {
     border-color: var(--primary-color);
     box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
 }
@@ -1070,7 +1070,7 @@ body {
         align-items: stretch;
     }
     
-    .batch-delete-actions {
+    .batch-select-actions {
         flex-direction: column;
         align-items: stretch;
     }

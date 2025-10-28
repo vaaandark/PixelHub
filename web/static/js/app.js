@@ -9,7 +9,7 @@ let gallerySort = 'date_desc';
 let totalImages = 0;
 let currentTags = []; // 当前编辑的标签列表
 let batchUploadedImages = []; // 批量上传的图片列表
-let batchDeleteMode = false; // 批量删除模式
+let batchSelectMode = false; // 批量选择模式（可用于删除或生成）
 let selectedImages = new Set(); // 选中的图片 ID 集合
 let allImageIds = []; // 所有图片的 ID 列表（用于全选）
 
@@ -236,11 +236,12 @@ function initGallery() {
         }
     });
     
-    // 批量删除按钮
-    document.getElementById('batchDeleteBtn').addEventListener('click', enterBatchDeleteMode);
+    // 批量选择按钮
+    document.getElementById('batchSelectBtn').addEventListener('click', enterBatchSelectMode);
     document.getElementById('selectAllImagesBtn').addEventListener('click', toggleSelectAllImages);
-    document.getElementById('cancelBatchDeleteBtn').addEventListener('click', exitBatchDeleteMode);
+    document.getElementById('batchGenerateSelectedBtn').addEventListener('click', batchGenerateSelected);
     document.getElementById('confirmDeleteBtn').addEventListener('click', confirmBatchDelete);
+    document.getElementById('cancelBatchSelectBtn').addEventListener('click', exitBatchSelectMode);
     
     // 初始加载
     loadGallery();
@@ -284,9 +285,9 @@ async function loadGallery() {
 function displayGallery(images) {
     const galleryGrid = document.getElementById('galleryGrid');
     galleryGrid.innerHTML = images.map(img => `
-        <div class="result-item ${batchDeleteMode ? 'batch-delete-mode' : ''}" 
-             ${batchDeleteMode ? `onclick="toggleImageSelectionByClick('${img.id}')"` : `onclick="showImageDetail('${img.id}')"`}>
-            ${batchDeleteMode ? `
+        <div class="result-item ${batchSelectMode ? 'batch-select-mode' : ''}" 
+             ${batchSelectMode ? `onclick="toggleImageSelectionByClick('${img.id}')"` : `onclick="showImageDetail('${img.id}')"`}>
+            ${batchSelectMode ? `
                 <div class="batch-checkbox-wrapper">
                     <input type="checkbox" 
                            class="batch-checkbox" 
@@ -409,7 +410,6 @@ async function showImageDetail(imageId) {
             
             // 清空 AI 生成状态
             document.getElementById('aiPromptSingle').value = '';
-            document.getElementById('aiDelimiterSingle').value = ',';
             document.getElementById('aiStatusSingle').innerHTML = '';
             
             imageModal.classList.remove('hidden');
@@ -597,6 +597,8 @@ function showBatchEdit(images) {
                 <input type="text" 
                        class="batch-description-input" 
                        data-image-id="${img.image_id}" 
+                       data-index="${index}"
+                       value="${escapeHtml(img.batchDescription || '')}"
                        placeholder="输入图片描述">
             </div>
             <div class="batch-edit-tags">
@@ -613,9 +615,13 @@ function showBatchEdit(images) {
         </div>
     `).join('');
     
-    // 初始化每个图片的标签数组
+    // 初始化每个图片的标签数组（如果还不存在）
     images.forEach((img, index) => {
-        img.batchTags = [];
+        if (!img.batchTags) {
+            img.batchTags = [];
+        }
+        // 渲染已有的标签
+        renderBatchTags(index);
     });
     
     batchEditModal.classList.remove('hidden');
@@ -706,14 +712,13 @@ async function saveBatchEdits() {
     const errors = [];
     
     try {
-        // 获取所有描述输入
-        const descriptionInputs = document.querySelectorAll('.batch-description-input');
-        
         // 逐个保存图片信息
         for (let i = 0; i < batchUploadedImages.length; i++) {
             const img = batchUploadedImages[i];
-            const descInput = descriptionInputs[i];
-            const description = descInput.value.trim();
+            
+            // 通过 data-index 获取对应的描述输入框
+            const descInput = document.querySelector(`.batch-description-input[data-index="${i}"]`);
+            const description = descInput ? descInput.value.trim() : '';
             const tags = img.batchTags || [];
             
             try {
@@ -772,43 +777,56 @@ async function saveBatchEdits() {
 // 单图片 AI 生成标签
 async function generateSingleImageTags() {
     const prompt = document.getElementById('aiPromptSingle').value.trim();
-    const delimiter = document.getElementById('aiDelimiterSingle').value.trim() || ',';
     const btn = document.getElementById('aiGenerateSingleBtn');
     const statusDiv = document.getElementById('aiStatusSingle');
     const tagsEditor = document.querySelector('.tags-editor');
+    const descriptionInput = document.getElementById('newDescription');
     
     if (!currentImageId) {
         statusDiv.innerHTML = '<div class="ai-status error">✗ 没有选择图片</div>';
         return;
     }
     
-    // 禁用按钮和标签编辑器
+    // 禁用按钮、标签编辑器和描述输入框
     btn.disabled = true;
     btn.textContent = '生成中...';
     tagsEditor.classList.add('ai-loading-single');
     statusDiv.innerHTML = '<div class="ai-status loading">⏳ AI 正在分析图片...</div>';
     
+    // 为描述输入框添加加载状态
+    if (descriptionInput) {
+        descriptionInput.dataset.originalPlaceholder = descriptionInput.placeholder;
+        descriptionInput.placeholder = '⏳ AI 正在生成描述...';
+        descriptionInput.disabled = true;
+        descriptionInput.style.opacity = '0.6';
+        descriptionInput.style.cursor = 'not-allowed';
+    }
+    
     try {
-        // 调用 AI 生成标签 API
+        // 调用 AI 生成描述和标签 API
         const response = await fetch(`${API_BASE}/images/${currentImageId}/tags/generate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                prompt: prompt || undefined,
-                delimiter: delimiter,
-                mode: 'append'
+                prompt: prompt || undefined
             })
         });
         
         const data = await response.json();
         
         if (data.code === 200) {
-            // 成功：更新标签列表
+            // 成功：更新描述和标签
+            const generatedDescription = data.data.generated_description || '';
             const generatedTags = data.data.generated_tags || [];
             
-            // 合并到 currentTags
+            // 更新描述（直接覆盖）
+            if (descriptionInput) {
+                descriptionInput.value = generatedDescription;
+            }
+            
+            // 追加标签（合并到 currentTags）
             generatedTags.forEach(tag => {
                 if (!currentTags.includes(tag)) {
                     currentTags.push(tag);
@@ -819,9 +837,9 @@ async function generateSingleImageTags() {
             renderEditableTags();
             
             // 显示成功状态
-            statusDiv.innerHTML = `<div class="ai-status success">✓ 成功生成 ${generatedTags.length} 个标签: ${generatedTags.join(', ')}</div>`;
+            statusDiv.innerHTML = `<div class="ai-status success">✓ 成功生成描述和 ${generatedTags.length} 个标签</div>`;
             
-            // 3秒后清空状态
+            // 5秒后清空状态
             setTimeout(() => {
                 statusDiv.innerHTML = '';
             }, 5000);
@@ -836,6 +854,14 @@ async function generateSingleImageTags() {
         btn.disabled = false;
         btn.textContent = '✨ 生成';
         tagsEditor.classList.remove('ai-loading-single');
+        
+        // 恢复描述输入框状态
+        if (descriptionInput) {
+            descriptionInput.placeholder = descriptionInput.dataset.originalPlaceholder || '输入新描述';
+            descriptionInput.disabled = false;
+            descriptionInput.style.opacity = '1';
+            descriptionInput.style.cursor = 'text';
+        }
     }
 }
 
@@ -875,12 +901,11 @@ async function runWithConcurrency(tasks, concurrency) {
 // 批量 AI 生成标签
 async function batchGenerateTags() {
     const prompt = document.getElementById('aiPrompt').value.trim();
-    const delimiter = document.getElementById('aiDelimiter').value.trim() || ',';
     const concurrency = parseInt(document.getElementById('aiConcurrency').value) || 5;
     const btn = document.getElementById('aiGenerateBtn');
     
     if (batchUploadedImages.length === 0) {
-        alert('没有图片需要生成标签');
+        alert('没有图片需要生成描述和标签');
         return;
     }
     
@@ -903,6 +928,16 @@ async function batchGenerateTags() {
             const tagContainer = document.getElementById(`batchTags_${i}`).parentElement;
             tagContainer.classList.add('ai-loading');
             
+            // 为描述输入框添加加载状态
+            const descInput = document.querySelector(`.batch-description-input[data-index="${i}"]`);
+            if (descInput) {
+                descInput.dataset.originalPlaceholder = descInput.placeholder;
+                descInput.placeholder = '⏳ AI 正在生成描述...';
+                descInput.disabled = true;
+                descInput.style.opacity = '0.6';
+                descInput.style.cursor = 'not-allowed';
+            }
+            
             // 移除之前的状态提示
             const oldStatus = tagContainer.querySelector('.ai-status');
             if (oldStatus) {
@@ -915,26 +950,32 @@ async function batchGenerateTags() {
             const tagContainer = document.getElementById(`batchTags_${i}`).parentElement;
             
             try {
-                // 调用 AI 生成标签 API
+                // 调用 AI 生成描述和标签 API
                 const response = await fetch(`${API_BASE}/images/${img.image_id}/tags/generate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        prompt: prompt || undefined,
-                        delimiter: delimiter,
-                        mode: 'append'
+                        prompt: prompt || undefined
                     })
                 });
                 
                 const data = await response.json();
                 
                 if (data.code === 200) {
-                    // 成功：更新标签列表
+                    // 成功：更新描述和标签
+                    const generatedDescription = data.data.generated_description || '';
                     const generatedTags = data.data.generated_tags || [];
                     
-                    // 合并到 batchTags
+                    // 更新描述（直接覆盖）
+                    img.batchDescription = generatedDescription;
+                    const descInput = document.querySelector(`.batch-description-input[data-index="${i}"]`);
+                    if (descInput) {
+                        descInput.value = generatedDescription;
+                    }
+                    
+                    // 追加标签（合并到 batchTags）
                     if (!img.batchTags) {
                         img.batchTags = [];
                     }
@@ -950,7 +991,7 @@ async function batchGenerateTags() {
                     // 显示成功状态
                     const statusDiv = document.createElement('div');
                     statusDiv.className = 'ai-status success';
-                    statusDiv.textContent = `✓ 已生成 ${generatedTags.length} 个标签`;
+                    statusDiv.textContent = `✓ 已生成描述和 ${generatedTags.length} 个标签`;
                     tagContainer.appendChild(statusDiv);
                     
                     return { success: true };
@@ -968,6 +1009,15 @@ async function batchGenerateTags() {
             } finally {
                 // 移除加载状态
                 tagContainer.classList.remove('ai-loading');
+                
+                // 移除描述输入框的加载状态
+                const descInput = document.querySelector(`.batch-description-input[data-index="${i}"]`);
+                if (descInput) {
+                    descInput.placeholder = descInput.dataset.originalPlaceholder || '输入图片描述';
+                    descInput.disabled = false;
+                    descInput.style.opacity = '1';
+                    descInput.style.cursor = 'text';
+                }
             }
         });
         
@@ -985,7 +1035,7 @@ async function batchGenerateTags() {
         
         // 显示总结
         if (failCount === 0) {
-            alert(`✅ 全部生成成功！共为 ${successCount} 张图片生成了标签`);
+            alert(`✅ 全部生成成功！共为 ${successCount} 张图片生成了描述和标签`);
         } else {
             alert(`⚠️ 生成完成\n成功: ${successCount} 张\n失败: ${failCount} 张`);
         }
@@ -993,15 +1043,15 @@ async function batchGenerateTags() {
         alert(`批量生成失败: ${error.message}`);
     } finally {
         btn.disabled = false;
-        btn.textContent = '✨ 自动生成标签';
+        btn.textContent = '✨ 自动生成描述和标签';
     }
 }
 
-// ==================== 批量删除功能 ====================
+// ==================== 批量选择功能（删除、生成） ====================
 
-// 进入批量删除模式
-function enterBatchDeleteMode() {
-    batchDeleteMode = true;
+// 进入批量选择模式
+function enterBatchSelectMode() {
+    batchSelectMode = true;
     selectedImages.clear();
     allImageIds = []; // 重置全选缓存
     
@@ -1012,8 +1062,8 @@ function enterBatchDeleteMode() {
     }
     
     // 显示/隐藏相关按钮
-    document.getElementById('batchDeleteBtn').classList.add('hidden');
-    document.getElementById('batchDeleteActions').classList.remove('hidden');
+    document.getElementById('batchSelectBtn').classList.add('hidden');
+    document.getElementById('batchSelectActions').classList.remove('hidden');
     
     // 更新选中计数
     updateSelectedCount();
@@ -1022,15 +1072,15 @@ function enterBatchDeleteMode() {
     loadGallery();
 }
 
-// 退出批量删除模式
-function exitBatchDeleteMode() {
-    batchDeleteMode = false;
+// 退出批量选择模式
+function exitBatchSelectMode() {
+    batchSelectMode = false;
     selectedImages.clear();
     allImageIds = []; // 清空全选缓存
     
     // 显示/隐藏相关按钮
-    document.getElementById('batchDeleteBtn').classList.remove('hidden');
-    document.getElementById('batchDeleteActions').classList.add('hidden');
+    document.getElementById('batchSelectBtn').classList.remove('hidden');
+    document.getElementById('batchSelectActions').classList.add('hidden');
     
     // 重新渲染图片列表（隐藏复选框）
     loadGallery();
@@ -1125,6 +1175,58 @@ async function toggleSelectAllImages() {
     updateSelectedCount();
 }
 
+// 批量生成选中图片的描述和标签
+async function batchGenerateSelected() {
+    if (selectedImages.size === 0) {
+        alert('请先选择要生成描述和标签的图片');
+        return;
+    }
+    
+    const btn = document.getElementById('batchGenerateSelectedBtn');
+    btn.disabled = true;
+    btn.textContent = '加载中...';
+    
+    try {
+        const imageIds = Array.from(selectedImages);
+        
+        // 获取所有选中图片的详细信息
+        const imageInfoPromises = imageIds.map(imageId =>
+            fetch(`${API_BASE}/images/${imageId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        // 从 URL 中提取文件名，或使用 image_id
+                        const urlParts = data.data.url.split('/');
+                        const filename = urlParts[urlParts.length - 1] || data.data.image_id;
+                        
+                        return {
+                            image_id: data.data.image_id,
+                            url: data.data.url,
+                            filename: filename,
+                            batchDescription: data.data.description || '',
+                            batchTags: data.data.tags || []
+                        };
+                    }
+                    throw new Error('Failed to fetch image info');
+                })
+        );
+        
+        const imageInfos = await Promise.all(imageInfoPromises);
+        
+        // 退出多选模式
+        exitBatchSelectMode();
+        
+        // 打开批量编辑模态框（传递图片信息）
+        showBatchEdit(imageInfos);
+        
+    } catch (error) {
+        alert(`加载图片信息失败: ${error.message}`);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '生成描述和标签';
+    }
+}
+
 // 确认批量删除
 async function confirmBatchDelete() {
     if (selectedImages.size === 0) {
@@ -1166,8 +1268,8 @@ async function confirmBatchDelete() {
                 alert(`⚠️ 删除完成\n成功: ${success} 张\n失败: ${failed} 张\n\n失败详情:\n${failedList}`);
             }
             
-            // 退出批量删除模式并刷新
-            exitBatchDeleteMode();
+            // 退出批量选择模式并刷新
+            exitBatchSelectMode();
             loadTags();
         } else {
             throw new Error(data.message);

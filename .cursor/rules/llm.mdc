@@ -3,25 +3,31 @@ description: Large Language Model
 alwaysApply: false
 ---
 
-接入多模态大语言模型的能力，用来给图片打标签。大模型打标签能力应抽象成 interface，目前的 Doubao Seed 只是其中一种 provider 实现。
+接入多模态大语言模型的能力，用来为图片生成描述和标签。大模型能力应抽象成 interface，目前的 Doubao Seed 只是其中一种 provider 实现。
 
 ## LLM Provider Interface 设计
 
 ```go
+// ImageAnalysisResult 图片分析结果
+type ImageAnalysisResult struct {
+    Description string   `json:"description"` // 图片描述
+    Tags        []string `json:"tags"`        // 标签列表
+}
+
 // TagGenerator 标签生成器接口
 type TagGenerator interface {
-    // GenerateTags 为图片生成标签
+    // GenerateImageInfo 为图片生成描述和标签
     // imageURL: 图片的可访问 URL
     // prompt: 提示词（为空时使用默认提示词）
-    // delimiter: 标签分隔符（用于解析 LLM 返回的文本）
-    // 返回: 标签列表和错误
-    GenerateTags(ctx context.Context, imageURL string, prompt string, delimiter string) ([]string, error)
+    // 返回: 分析结果（包含 description 和 tags）和错误
+    GenerateImageInfo(ctx context.Context, imageURL string, prompt string) (*ImageAnalysisResult, error)
 }
 ```
 
 **设计理念**：
-- 将控制权交给 `prompt`，让用户通过提示词自由控制标签的数量、语言、风格
-- `delimiter` 与 `prompt` 配合，灵活解析不同格式的返回结果
+- 同时生成描述和标签，提供更完整的图片信息
+- 使用 JSON 格式输出，避免分隔符解析的不确定性
+- 将控制权交给 `prompt`，让用户通过提示词自由控制描述风格、标签数量、语言等
 - 接口简洁，易于扩展不同的 LLM provider
 
 ## 配置参数
@@ -35,22 +41,32 @@ api_key = "your-api-key"                                # API 密钥（建议使
 base_url = "https://ark.cn-beijing.volces.com/api/v3" # API 基础 URL
 model = "doubao-seed-1-6-251015"                       # 模型名称
 timeout = 30                                            # 请求超时时间（秒）
-default_prompt = "请分析这张图片，生成 5-10 个中文描述性标签，用半角逗号分隔。标签应准确、简洁，涵盖：主题、场景、风格、色彩、情感等方面。请只返回标签列表，不要包含其他内容。"
-default_delimiter = ","                                 # 默认分隔符
+default_prompt = "请分析这张图片，为它生成一个简洁的描述（20-50字）和 5-10 个描述性标签。标签应准确、简洁，涵盖：主题、场景、风格、色彩、情感等方面。"
 ```
 
 ## 请求参数说明
 
-给图片打标签需要以下入参：
+给图片生成描述和标签需要以下入参：
 - **图片 URL**（或图片 ID，再查出来 URL）：LLM 需要分析的图片
-- **提示词（prompt）**：引导 LLM 生成标签的指令
-  - 可在提示词中控制：标签数量、语言、风格、侧重点等
+- **提示词（prompt）**：引导 LLM 生成描述和标签的指令
+  - 可在提示词中控制：描述风格、标签数量、语言、侧重点等
   - 为空时使用默认提示词
-- **分隔符（delimiter）**：用于解析 LLM 返回的文本，提取标签列表
-  - 常用：逗号 `,`、分号 `;`、换行符 `\n` 等
-  - 必须与提示词中要求的格式一致
 
-接入示例代码如下：
+## JSON 格式约束
+
+系统会自动在用户的 `prompt` 后面追加 JSON 格式约束，确保 LLM 返回结构化数据：
+
+```
+请严格按照以下 JSON 格式输出，不要包含任何其他内容：
+{
+  "description": "图片的简洁描述",
+  "tags": ["标签1", "标签2", "标签3"]
+}
+```
+
+这样 LLM 的完整 prompt 为：`用户提示词 + JSON 格式约束`
+
+## 接入示例代码
 
 ```go
 package main
@@ -68,7 +84,15 @@ func main() {
     config.BaseURL = "https://ark.cn-beijing.volces.com/api/v3"
     client := ark.NewClientWithConfig(config)
 
-    fmt.Println("----- image input -----")
+    prompt := `请分析这张图片，为它生成一个简洁的描述（20-50字）和 5-10 个描述性标签。
+标签应准确、简洁，涵盖：主题、场景、风格、色彩、情感等方面。
+
+请严格按照以下 JSON 格式输出，不要包含任何其他内容：
+{
+  "description": "图片的简洁描述",
+  "tags": ["标签1", "标签2", "标签3"]
+}`
+
     req := ark.ChatCompletionRequest{
        Model: "doubao-seed-1-6-251015",
        Messages: []ark.ChatCompletionMessage{
@@ -78,13 +102,12 @@ func main() {
                 {
                    Type: ark.ChatMessagePartTypeImageURL,
                    ImageURL: &ark.ChatMessageImageURL{
-                      URL: "https://ark-project.tos-cn-beijing.ivolces.com/images/view.jpeg",
+                      URL: "https://example.com/image.jpg",
                    },
                 },
                 {
-
                    Type: ark.ChatMessagePartTypeText,
-                   Text: "这是哪里？",
+                   Text: prompt,
                 },
              },
           },
@@ -106,44 +129,45 @@ func main() {
 
 **默认提示词（中文通用）**：
 ```
-请分析这张图片，生成 5-10 个中文描述性标签，用逗号分隔。
+请分析这张图片，为它生成一个简洁的描述（20-50字）和 5-10 个描述性标签。
 标签应准确、简洁，涵盖：主题、场景、风格、色彩、情感等方面。
-请只返回标签列表，不要包含其他内容。
 ```
 
-**英文标签**：
+**英文内容**：
 ```
-Analyze this image and generate 8 descriptive tags in English, separated by commas.
+Analyze this image and generate a concise description (20-50 words) and 8-10 descriptive tags in English.
 Tags should cover: subject, scene, style, colors, and mood.
-Return only the tag list without any other text.
 ```
 
-**专业摄影标签**：
+**专业摄影风格**：
 ```
-分析这张照片的拍摄技巧和特点，生成 6 个专业摄影术语标签，用逗号分隔。
+用专业摄影术语描述这张照片的特点（30字以内），并生成 6 个摄影技术相关的标签。
 包括：构图方式、光线类型、景深效果、拍摄角度等。
-只返回标签列表。
 ```
 
 **艺术风格分析**：
 ```
-请识别这张图片的艺术风格和流派，生成 5 个艺术术语标签，用分号分隔。
+请从艺术鉴赏角度描述这张图片（30字），并生成 5 个艺术风格/流派相关的标签。
 例如：印象派、极简主义、超现实主义等。
-只返回标签列表。
 ```
 
 **情感和氛围**：
 ```
-描述这张图片传达的情感和氛围，生成 4-6 个形容词标签，用逗号分隔。
+描述这张图片传达的情感和氛围（25字以内），并生成 4-6 个情感形容词标签。
 例如：宁静的、欢快的、忧郁的、温暖的等。
-只返回标签列表。
 ```
 
 **多语言混合**：
 ```
-Generate 10 bilingual tags (Chinese + English) for this image, format: "中文/English", separated by commas.
+Generate a bilingual description (Chinese + English, 40 words) and 10 bilingual tags (format: "中文/English") for this image.
 Cover subject, style, and atmosphere.
-Example format: "风景/landscape, 日落/sunset"
+Example tag format: "风景/landscape", "日落/sunset"
+```
+
+**诗意文艺风格**：
+```
+用诗意的语言描述这张图片（30字以内），营造意境和美感。
+然后生成 8 个文艺风格的标签，注重美学和情感表达。
 ```
 
 ## 实现建议
@@ -151,22 +175,29 @@ Example format: "风景/landscape, 日落/sunset"
 1. **错误处理**：LLM 服务可能不稳定，需要：
    - 设置合理的超时时间
    - 实现重试机制（建议 3 次）
-   - 提供降级方案（如返回空标签列表而不是报错）
+   - 提供降级方案（如返回空结果而不是报错）
 
-2. **标签后处理**：
-   - 按 `delimiter` 分割 LLM 返回的文本
+2. **JSON 解析**：
+   - 使用正则表达式提取 JSON 部分（LLM 可能在前后添加额外文本）
+   - 验证 JSON 格式，确保包含 `description` 和 `tags` 字段
+   - 处理 JSON 解析失败的情况
+
+3. **标签后处理**：
    - 去除重复标签
    - 过滤空白标签
    - 去除标签首尾空格
-   - 可选：去除标点符号和特殊字符（根据业务需求）
    - 可选：标签长度限制（根据业务需求）
 
-3. **性能优化**：
-   - 考虑添加缓存（图片 hash -> 标签列表）
+4. **描述后处理**：
+   - 去除首尾空格
+   - 可选：长度限制（根据业务需求）
+
+5. **性能优化**：
+   - 考虑添加缓存（图片 hash -> 描述+标签）
    - 异步处理，避免阻塞主流程
    - 批量处理时可以并发调用
 
-4. **成本控制**：
+6. **成本控制**：
    - 记录 API 调用次数和 token 消耗
    - 设置每日/每月配额
    - 提供使用统计接口
@@ -176,21 +207,19 @@ Example format: "风景/landscape, 日落/sunset"
 ```
 internal/
 ├── llm/
-│   ├── interface.go      # TagGenerator 接口定义
+│   ├── interface.go      # TagGenerator 接口定义和 ImageAnalysisResult 结构
 │   ├── doubao.go         # Doubao Seed 实现
 │   ├── openai.go         # OpenAI 实现（可选扩展）
-│   ├── config.go         # LLM 配置结构和加载
-│   ├── prompt.go         # 默认提示词常量定义
-│   └── processor.go      # 标签后处理逻辑（分割、去重、过滤）
+│   ├── prompt.go         # 默认提示词和 JSON 格式约束常量定义
+│   └── processor.go      # JSON 解析和结果后处理逻辑
 ```
 
 **核心功能说明**：
 
-- `interface.go`: 定义 `TagGenerator` 接口，保证不同 provider 的一致性
+- `interface.go`: 定义 `TagGenerator` 接口和 `ImageAnalysisResult` 结构体，保证不同 provider 的一致性
 - `doubao.go`: Doubao Seed 的具体实现，封装 API 调用细节
-- `config.go`: LLM 配置的结构体定义和从 `config.toml` 加载逻辑
-- `prompt.go`: 存储默认提示词常量，方便维护和修改
-- `processor.go`: 统一的标签后处理逻辑，包括：
-  - 按 delimiter 分割
-  - 去重、去空白
-  - 可选的格式化和验证
+- `prompt.go`: 存储默认提示词和 JSON 格式约束常量，方便维护和修改
+- `processor.go`: 统一的结果处理逻辑，包括：
+  - 提取 JSON（使用正则表达式）
+  - 解析 JSON
+  - 验证和清理数据（去重、去空白）

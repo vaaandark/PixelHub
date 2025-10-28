@@ -470,9 +470,7 @@ func (h *Handler) GenerateImageTags(c *gin.Context) {
 	imageID := c.Param("image_id")
 
 	var req struct {
-		Prompt    string `json:"prompt"`
-		Delimiter string `json:"delimiter"`
-		Mode      string `json:"mode"` // "append" or "replace"
+		Prompt string `json:"prompt"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -509,19 +507,9 @@ func (h *Handler) GenerateImageTags(c *gin.Context) {
 		return
 	}
 
-	// 获取当前标签
-	tagsBefore, err := database.GetPictureTags(h.db, imageID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Code:    500,
-			Message: "Failed to get current tags",
-		})
-		return
-	}
-
-	// 调用 LLM 生成标签
+	// 调用 LLM 生成描述和标签
 	ctx := c.Request.Context()
-	generatedTags, err := h.tagGenerator.GenerateTags(ctx, pic.URL, req.Prompt, req.Delimiter)
+	result, err := h.tagGenerator.GenerateImageInfo(ctx, pic.URL, req.Prompt)
 	if err != nil {
 		c.JSON(http.StatusServiceUnavailable, Response{
 			Code:    503,
@@ -530,40 +518,12 @@ func (h *Handler) GenerateImageTags(c *gin.Context) {
 		return
 	}
 
-	// 根据 mode 处理标签
-	mode := req.Mode
-	if mode == "" {
-		mode = "append"
-	}
-
-	var finalTags []string
-	if mode == "replace" {
-		// 替换模式：使用生成的标签
-		finalTags = generatedTags
-		err = database.SetPictureTags(h.db, imageID, generatedTags)
-	} else {
-		// 追加模式：合并标签
-		err = database.AppendPictureTags(h.db, imageID, generatedTags)
-		// 获取更新后的标签
-		finalTags, _ = database.GetPictureTags(h.db, imageID)
-	}
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Code:    500,
-			Message: fmt.Sprintf("Failed to update tags: %v", err),
-		})
-		return
-	}
-
 	c.JSON(http.StatusOK, Response{
 		Code:    200,
-		Message: "Tags generated successfully",
+		Message: "Image info generated successfully",
 		Data: map[string]interface{}{
-			"generated_tags": generatedTags,
-			"mode":           mode,
-			"tags_before":    tagsBefore,
-			"tags_after":     finalTags,
+			"generated_description": result.Description,
+			"generated_tags":        result.Tags,
 		},
 	})
 }

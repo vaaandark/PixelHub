@@ -21,8 +21,8 @@ bucket_url = "https://your-bucket-1234567890.cos.ap-guangzhou.myqcloud.com"
 cdn_url = "https://cdn.your-imagehost.com"
 
 [llm]
-# LLM 配置（可选，用于 AI 生成图片标签）
-# 如果不需要 AI 标签生成功能，可以留空或删除此部分
+# LLM 配置（可选，用于 AI 生成图片描述和标签）
+# 如果不需要 AI 生成功能，可以留空或删除此部分
 provider = "doubao"
 # API Key：填写你的 API Key，或通过环境变量 ARK_API_KEY 设置
 api_key = ""
@@ -30,7 +30,5 @@ base_url = "https://ark.cn-beijing.volces.com/api/v3"
 model = "doubao-seed-1-6-251015"
 # 请求超时时间（秒）
 timeout = 30
-# 默认提示词（用于生成中文标签）
-default_prompt = "请分析这张图片，生成 5-10 个中文描述性标签，用半角逗号分隔。标签应准确、简洁，涵盖：主题、场景、风格、色彩、情感等方面。请只返回标签列表，不要包含其他内容。"
-# 默认分隔符
-default_delimiter = ","
+# 默认提示词（用于生成描述和标签，会自动追加 JSON 格式约束）
+default_prompt = "请分析这张图片，为它生成一个简洁的描述（20-50字）和 5-10 个描述性标签。标签应准确、简洁，涵盖：主题、场景、风格、色彩、情感等方面。"

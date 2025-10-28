@@ -2,12 +2,17 @@ package llm
 
 import "context"
 
+// ImageAnalysisResult 图片分析结果
+type ImageAnalysisResult struct {
+	Description string   `json:"description"` // 图片描述
+	Tags        []string `json:"tags"`        // 标签列表
+}
+
 // TagGenerator 标签生成器接口
 type TagGenerator interface {
-	// GenerateTags 为图片生成标签
+	// GenerateImageInfo 为图片生成描述和标签
 	// imageURL: 图片的可访问 URL
 	// prompt: 提示词（为空时使用默认提示词）
-	// delimiter: 标签分隔符（用于解析 LLM 返回的文本）
-	// 返回: 标签列表和错误
-	GenerateTags(ctx context.Context, imageURL string, prompt string, delimiter string) ([]string, error)
+	// 返回: 分析结果（包含 description 和 tags）和错误
+	GenerateImageInfo(ctx context.Context, imageURL string, prompt string) (*ImageAnalysisResult, error)
 }

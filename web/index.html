@@ -69,12 +69,13 @@
                         <span class="gallery-stats">共 <span id="totalImages">0</span> 张图片</span>
                     </div>
                     <div class="gallery-right-controls">
-                        <button id="batchDeleteBtn" class="btn btn-secondary">批量删除</button>
-                        <div id="batchDeleteActions" class="batch-delete-actions hidden">
+                        <button id="batchSelectBtn" class="btn btn-secondary">多选</button>
+                        <div id="batchSelectActions" class="batch-select-actions hidden">
                             <button id="selectAllImagesBtn" class="btn btn-secondary btn-sm">全选</button>
                             <span class="selected-count">已选择 <strong id="selectedCount">0</strong> 张</span>
+                            <button id="batchGenerateSelectedBtn" class="btn btn-success">生成描述和标签</button>
                             <button id="confirmDeleteBtn" class="btn btn-danger">删除选中</button>
-                            <button id="cancelBatchDeleteBtn" class="btn btn-secondary">取消</button>
+                            <button id="cancelBatchSelectBtn" class="btn btn-secondary">取消</button>
                         </div>
                     </div>
                 </div>
@@ -124,12 +125,11 @@
                         </div>
                     </div>
                     
-                    <!-- AI 生成标签 -->
+                    <!-- AI 生成描述和标签 -->
                     <div class="ai-tag-generator-single">
-                        <h4>🤖 AI 自动生成标签</h4>
+                        <h4>🤖 AI 自动生成描述和标签</h4>
                         <div class="ai-tag-controls-single">
                             <input type="text" id="aiPromptSingle" class="ai-input" placeholder="提示词（留空使用默认）">
-                            <input type="text" id="aiDelimiterSingle" class="ai-input-short" value="," placeholder=",">
                             <button id="aiGenerateSingleBtn" class="btn btn-success btn-sm">✨ 生成</button>
                         </div>
                         <div id="aiStatusSingle" class="ai-status-single"></div>
@@ -156,21 +156,17 @@
                 
                 <!-- AI 自动生成标签 -->
                 <div class="ai-tag-generator">
-                    <h4>🤖 AI 自动生成标签</h4>
+                    <h4>🤖 AI 自动生成描述和标签</h4>
                     <div class="ai-tag-controls">
                         <div class="ai-tag-input-group">
                             <label for="aiPrompt">提示词（留空使用默认）：</label>
-                            <input type="text" id="aiPrompt" class="ai-input" placeholder="例如：请用 8 个中文词语描述这张图片的主题、色调和氛围，用逗号分隔">
-                        </div>
-                        <div class="ai-tag-input-group">
-                            <label for="aiDelimiter">分隔符：</label>
-                            <input type="text" id="aiDelimiter" class="ai-input-short" value="," placeholder=",">
+                            <input type="text" id="aiPrompt" class="ai-input" placeholder="例如：请用描述这张图片，并生成不超过 10 个风格标签">
                         </div>
                         <div class="ai-tag-input-group">
                             <label for="aiConcurrency">并发数：</label>
                             <input type="number" id="aiConcurrency" class="ai-input-short" value="5" min="1" max="10" placeholder="5">
                         </div>
-                        <button id="aiGenerateBtn" class="btn btn-success">✨ 自动生成标签</button>
+                        <button id="aiGenerateBtn" class="btn btn-success">✨ 自动生成描述和标签</button>
                     </div>
                 </div>
                 

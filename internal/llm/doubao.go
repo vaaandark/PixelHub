@@ -11,11 +11,10 @@ import (
 
 // DoubaoGenerator Doubao 标签生成器
 type DoubaoGenerator struct {
-	client           *ark.Client
-	model            string
-	timeout          time.Duration
-	defaultPrompt    string
-	defaultDelimiter string
+	client        *ark.Client
+	model         string
+	timeout       time.Duration
+	defaultPrompt string
 }
 
 // NewDoubaoGenerator 创建 Doubao 标签生成器
@@ -38,29 +37,23 @@ func NewDoubaoGenerator(cfg *config.LLMConfig) (*DoubaoGenerator, error) {
 		defaultPrompt = DefaultPrompt
 	}
 
-	defaultDelimiter := cfg.DefaultDelimiter
-	if defaultDelimiter == "" {
-		defaultDelimiter = DefaultDelimiter
-	}
-
 	return &DoubaoGenerator{
-		client:           client,
-		model:            cfg.Model,
-		timeout:          timeout,
-		defaultPrompt:    defaultPrompt,
-		defaultDelimiter: defaultDelimiter,
+		client:        client,
+		model:         cfg.Model,
+		timeout:       timeout,
+		defaultPrompt: defaultPrompt,
 	}, nil
 }
 
-// GenerateTags 为图片生成标签
-func (g *DoubaoGenerator) GenerateTags(ctx context.Context, imageURL string, prompt string, delimiter string) ([]string, error) {
+// GenerateImageInfo 为图片生成描述和标签
+func (g *DoubaoGenerator) GenerateImageInfo(ctx context.Context, imageURL string, prompt string) (*ImageAnalysisResult, error) {
 	// 使用默认值
 	if prompt == "" {
 		prompt = g.defaultPrompt
 	}
-	if delimiter == "" {
-		delimiter = g.defaultDelimiter
-	}
+
+	// 追加 JSON 格式约束
+	fullPrompt := prompt + JSONFormatPrompt
 
 	// 设置超时
 	ctx, cancel := context.WithTimeout(ctx, g.timeout)
@@ -81,7 +74,7 @@ func (g *DoubaoGenerator) GenerateTags(ctx context.Context, imageURL string, pro
 					},
 					{
 						Type: ark.ChatMessagePartTypeText,
-						Text: prompt,
+						Text: fullPrompt,
 					},
 				},
 			},
@@ -101,8 +94,11 @@ func (g *DoubaoGenerator) GenerateTags(ctx context.Context, imageURL string, pro
 	// 提取文本
 	text := resp.Choices[0].Message.Content
 
-	// 处理标签
-	tags := ProcessTags(text, delimiter)
+	// 解析 JSON
+	result, err := ParseImageAnalysisResult(text)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse LLM response: %w", err)
+	}
 
-	return tags, nil
+	return result, nil
 }
