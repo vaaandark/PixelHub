@@ -284,6 +284,13 @@ async function loadGallery() {
 
 function displayGallery(images) {
     const galleryGrid = document.getElementById('galleryGrid');
+    
+    if (batchSelectMode) {
+        // 调试信息：当前页有多少图片被选中
+        const selectedCount = images.filter(img => selectedImages.has(img.id)).length;
+        console.log(`[displayGallery] 批量选择模式，当前页 ${images.length} 张图片，其中 ${selectedCount} 张已选中`);
+    }
+    
     galleryGrid.innerHTML = images.map(img => `
         <div class="result-item ${batchSelectMode ? 'batch-select-mode' : ''}" 
              ${batchSelectMode ? `onclick="toggleImageSelectionByClick('${img.id}')"` : `onclick="showImageDetail('${img.id}')"`}>
@@ -1129,22 +1136,47 @@ function updateSelectedCount() {
 async function toggleSelectAllImages() {
     const btn = document.getElementById('selectAllImagesBtn');
     
-    // 如果还没有加载所有图片 ID，先加载
+    // 如果还没有加载所有图片 ID，先分页加载
     if (allImageIds.length === 0) {
         btn.disabled = true;
         btn.textContent = '加载中...';
         
         try {
-            // 获取所有图片（不分页）
-            const response = await fetch(`${API_BASE}/images?page=1&limit=10000`);
-            const data = await response.json();
+            // 分页获取所有图片 ID
+            console.log('[全选] 开始分页加载所有图片 ID');
+            const limit = 100; // 每页100张（后端最大限制）
+            let page = 1;
+            let total = 0;
             
-            if (data.code === 200 && data.data.images) {
-                allImageIds = data.data.images.map(img => img.id);
-            } else {
+            // 先获取第一页，获取 total
+            const firstResponse = await fetch(`${API_BASE}/images?page=${page}&limit=${limit}`);
+            const firstData = await firstResponse.json();
+            
+            if (firstData.code !== 200 || !firstData.data.images) {
                 alert('获取图片列表失败');
                 return;
             }
+            
+            total = firstData.data.total;
+            allImageIds = firstData.data.images.map(img => img.id);
+            console.log(`[全选] 第1页：获取 ${firstData.data.images.length} 个 ID，总数 ${total}`);
+            
+            // 计算总页数，继续获取剩余页
+            const totalPages = Math.ceil(total / limit);
+            for (page = 2; page <= totalPages; page++) {
+                btn.textContent = `加载中 (${page}/${totalPages})`;
+                const response = await fetch(`${API_BASE}/images?page=${page}&limit=${limit}`);
+                const data = await response.json();
+                
+                if (data.code === 200 && data.data.images) {
+                    const pageIds = data.data.images.map(img => img.id);
+                    allImageIds = allImageIds.concat(pageIds);
+                    console.log(`[全选] 第${page}页：获取 ${pageIds.length} 个 ID，累计 ${allImageIds.length} 个`);
+                }
+            }
+            
+            console.log(`[全选] 加载完成，共 ${allImageIds.length} 个图片 ID`);
+            btn.textContent = '全选';
         } catch (error) {
             alert(`加载失败: ${error.message}`);
             return;
@@ -1159,9 +1191,11 @@ async function toggleSelectAllImages() {
     if (allSelected) {
         // 取消全选：清空所有选中
         selectedImages.clear();
+        console.log('[全选] 取消全选，清空选择');
     } else {
         // 全选：添加所有图片
         allImageIds.forEach(id => selectedImages.add(id));
+        console.log(`[全选] 已选中所有 ${allImageIds.length} 张图片，selectedImages.size = ${selectedImages.size}`);
     }
     
     // 更新当前页的复选框状态
