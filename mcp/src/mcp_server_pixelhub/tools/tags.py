@@ -14,7 +14,7 @@ from mcp_server_pixelhub.tools import mcp
 
 @mcp.tool(
     name="list_tags",
-    description="List all available tags in the PixelHub system with their usage counts, sorted by usage frequency",
+    description="STEP 1: List all available tags in the PixelHub system. ALWAYS call this tool FIRST before searching for images to understand what tags are available and find the most relevant ones for your search.",
 )
 async def list_tags(
     page: int = Field(
@@ -27,12 +27,20 @@ async def list_tags(
     ),
 ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
     """
-    List all available tags in the PixelHub system.
+    WORKFLOW STEP 1: List all available tags in the PixelHub system.
+    
+    IMPORTANT: This tool should ALWAYS be called FIRST when a user asks for images.
     
     This tool retrieves all tags that have been used to categorize images,
     along with their usage counts. Tags are sorted by usage frequency (most used first).
-    This is useful for understanding what types of images are available in the system
-    and for finding relevant tags to use in image searches.
+    
+    WORKFLOW:
+    1. Call this tool first to see all available tags
+    2. Analyze the user's request and identify relevant tags from the list
+    3. Then call search_images_by_tags with the selected tags
+    
+    This ensures you only use tags that actually exist in the system and helps
+    you find the most relevant images for the user's request.
     """
     try:
         # Validate parameters
@@ -73,6 +81,8 @@ async def list_tags(
             remaining = total - (current_page - 1) * limit - len(tags)
             if remaining > 0:
                 result_text += f"\n... and {remaining} more tags. Use page={current_page + 1} to see more."
+        
+        result_text += f"\n\nNEXT STEP: Now use search_images_by_tags with relevant tags from this list to find images."
         
         return [types.TextContent(type="text", text=result_text)]
         

@@ -14,11 +14,11 @@ from mcp_server_pixelhub.tools import mcp
 
 @mcp.tool(
     name="search_images_by_tags",
-    description="Search images by tags using relevance ranking (OR logic). Images are ranked by the number of matching tags in descending order.",
+    description="STEP 2: Search images by tags using relevance ranking (OR logic). ONLY call this tool AFTER calling list_tags first to get available tags. Use tags from the list_tags result.",
 )
 async def search_images_by_tags(
     tags: List[str] = Field(
-        description="List of tags to search for. Images matching any of these tags will be returned, ranked by relevance (number of matching tags)",
+        description="List of tags to search for. IMPORTANT: Only use tags that exist in the system (from list_tags result). Images matching any of these tags will be returned, ranked by relevance (number of matching tags)",
     ),
     page: int = Field(
         default=1,
@@ -30,24 +30,35 @@ async def search_images_by_tags(
     ),
 ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
     """
-    Search for images using tag-based relevance ranking.
+    WORKFLOW STEP 2: Search for images using tag-based relevance ranking.
+    
+    PREREQUISITE: You MUST call list_tags first to get available tags before using this tool.
     
     This tool searches for images that match any of the provided tags using OR logic.
     Results are ranked by relevance - images with more matching tags appear first.
-    This is perfect for semantic image discovery where you want to find images
-    related to multiple concepts or themes.
     
-    For example, searching for ["nature", "mountains", "sunset"] will return:
-    1. Images tagged with all three tags first
-    2. Images tagged with any two of the tags next  
-    3. Images tagged with only one of the tags last
+    IMPORTANT WORKFLOW:
+    1. First call list_tags to see all available tags
+    2. Analyze user's request and select relevant tags from the list_tags result
+    3. Then call this tool with the selected tags
+    
+    ONLY use tags that actually exist in the system (from list_tags output).
+    
+    For example, if user wants "purple iPhone photos" and list_tags shows:
+    - "purple gradient background", "iPhone", "eye-level shot"
+    Then search with: ["purple gradient background", "iPhone", "eye-level shot"]
+    
+    Results are ranked by relevance:
+    1. Images tagged with all selected tags first
+    2. Images tagged with multiple selected tags next  
+    3. Images tagged with fewer selected tags last
     """
     try:
         # Validate parameters
         if not tags:
             return [types.TextContent(
                 type="text", 
-                text="Error: At least one tag must be provided for search."
+                text="Error: At least one tag must be provided for search. Please call list_tags first to see available tags, then use those tags for search."
             )]
             
         if page < 1:
@@ -76,7 +87,7 @@ async def search_images_by_tags(
         if not results:
             return [types.TextContent(
                 type="text", 
-                text=f"No images found matching the tags: {', '.join(tags)}"
+                text=f"No images found matching the tags: {', '.join(tags)}. Try using different tags from the list_tags result, or call list_tags again to see all available options."
             )]
         
         # Format the response
