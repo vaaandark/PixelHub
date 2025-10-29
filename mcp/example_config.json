@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "pixelhub-local": {
+      "command": "uv",
+      "args": [
+        "run",
+        "mcp-server-pixelhub"
+      ],
+      "cwd": "/path/to/PixelHub/mcp",
+      "env": {
+        "PIXELHUB_BASE_URL": "http://localhost:8080"
+      }
+    },
+    "pixelhub-remote-http": {
+      "url": "http://your-server:8000/mcp"
+    },
+    "pixelhub-remote-sse": {
+      "url": "http://your-server:8000/sse",
+      "transport": "sse"
+    }
+  }
+}

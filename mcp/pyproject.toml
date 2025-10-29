@@ -1,0 +1,24 @@
+[project]
+name = "mcp-server-pixelhub"
+version = "0.1.0"
+description = "MCP Server for PixelHub - Image hosting service with tag management"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=1.9.4",
+    "pydantic==2.10.6",
+    "httpx>=0.28.0",
+    "concurrent-log-handler==0.9.25",
+    "dynaconf==3.2.10",
+    "jsonref>=1.1.0",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[project.scripts]
+mcp-server-pixelhub = "mcp_server_pixelhub.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
