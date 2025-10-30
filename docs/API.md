@@ -405,12 +405,12 @@ curl -X POST http://localhost:8080/api/v1/images/batch-delete \
 
 **请求**
 ```http
-GET /api/v1/tags?page=1&limit=50
+GET /api/v1/tags?page=1&limit=1000
 ```
 
 **查询参数**
 - `page` (optional): 页码，默认 1
-- `limit` (optional): 每页数量，默认 50，最大 100
+- `limit` (optional): 每页数量，默认 1000，最大 1000
 
 **响应**
 ```json
@@ -431,7 +431,7 @@ GET /api/v1/tags?page=1&limit=50
 
 **cURL 示例**
 ```bash
-curl "http://localhost:8080/api/v1/tags?page=1&limit=50"
+curl "http://localhost:8080/api/v1/tags?page=1&limit=1000"
 ```
 
 ---

@@ -22,8 +22,8 @@ async def list_tags(
         description="Page number for pagination, default is 1",
     ),
     limit: int = Field(
-        default=50,
-        description="Number of tags per page, default is 50, maximum is 100",
+        default=1000,
+        description="Number of tags per page, default is 1000, maximum is 1000",
     ),
 ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
     """
@@ -46,8 +46,8 @@ async def list_tags(
         # Validate parameters
         if page < 1:
             page = 1
-        if limit < 1 or limit > 100:
-            limit = 50
+        if limit < 1 or limit > 1000:
+            limit = 1000
             
         # Make request to PixelHub API
         response = make_request("GET", "/tags", {

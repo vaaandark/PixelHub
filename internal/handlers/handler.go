@@ -580,13 +580,13 @@ func (h *Handler) UpdateImageDescription(c *gin.Context) {
 // ListTags 列出所有标签
 func (h *Handler) ListTags(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "1000"))
 
 	if page < 1 {
 		page = 1
 	}
-	if limit < 1 || limit > 100 {
-		limit = 50
+	if limit < 1 || limit > 1000 {
+		limit = 1000
 	}
 
 	tags, total, err := database.ListTags(h.db, page, limit)

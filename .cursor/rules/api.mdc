@@ -341,7 +341,7 @@ alwaysApply: false
 | 参数 | 位置 | 类型 | 描述 | 必填 |
 | :--- | :--- | :--- | :--- | :--- |
 | `page` | Query | Integer | 页码 (从 1 开始)。 | 否 (默认 1) |
-| `limit` | Query | Integer | 每页数量。 | 否 (默认 50) |
+| `limit` | Query | Integer | 每页数量，最大 1000。 | 否 (默认 1000) |
 
 **成功响应:**
 
