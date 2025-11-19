@@ -240,6 +240,7 @@ function initGallery() {
     document.getElementById('batchSelectBtn').addEventListener('click', enterBatchSelectMode);
     document.getElementById('selectAllImagesBtn').addEventListener('click', toggleSelectAllImages);
     document.getElementById('batchGenerateSelectedBtn').addEventListener('click', batchGenerateSelected);
+    document.getElementById('batchClearTagsBtn').addEventListener('click', batchClearTags);
     document.getElementById('confirmDeleteBtn').addEventListener('click', confirmBatchDelete);
     document.getElementById('cancelBatchSelectBtn').addEventListener('click', exitBatchSelectMode);
     
@@ -1258,6 +1259,76 @@ async function batchGenerateSelected() {
     } finally {
         btn.disabled = false;
         btn.textContent = '生成描述和标签';
+    }
+}
+
+// 批量清除选中图片的标签
+async function batchClearTags() {
+    if (selectedImages.size === 0) {
+        alert('请先选择要清除标签的图片');
+        return;
+    }
+    
+    if (!confirm(`确定要清除选中的 ${selectedImages.size} 张图片的所有标签吗？\n此操作不可恢复！`)) {
+        return;
+    }
+    
+    const clearBtn = document.getElementById('batchClearTagsBtn');
+    clearBtn.disabled = true;
+    clearBtn.textContent = '清除中...';
+    
+    try {
+        const imageIds = Array.from(selectedImages);
+        let successCount = 0;
+        let failCount = 0;
+        const errors = [];
+        
+        // 逐个清除标签
+        for (const imageId of imageIds) {
+            try {
+                const response = await fetch(`${API_BASE}/images/${imageId}/tags`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        tags: [], 
+                        mode: 'set' 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.code === 200) {
+                    successCount++;
+                } else {
+                    throw new Error(data.message || '清除失败');
+                }
+            } catch (error) {
+                failCount++;
+                errors.push(`${imageId}: ${error.message}`);
+            }
+        }
+        
+        // 显示结果
+        if (failCount === 0) {
+            alert(`✅ 清除成功！共清除 ${successCount} 张图片的标签`);
+            // 退出批量选择模式并刷新
+            exitBatchSelectMode();
+            loadTags();
+            loadGallery();
+        } else {
+            const errorList = errors.join('\n');
+            alert(`⚠️ 清除完成\n成功: ${successCount} 张\n失败: ${failCount} 张\n\n失败详情:\n${errorList}`);
+            // 即使有失败也刷新
+            loadTags();
+            loadGallery();
+        }
+    } catch (error) {
+        alert(`批量清除标签失败: ${error.message}`);
+    } finally {
+        clearBtn.disabled = false;
+        clearBtn.textContent = '清除标签';
     }
 }
 
